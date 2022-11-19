@@ -14,7 +14,7 @@ public class SSHConnection {
         case idle, ready, failed(ConnectionError)
     }
 
-    var state: SSHConnection.State {
+    public var state: SSHConnection.State {
         stateMachine.state
     }
 

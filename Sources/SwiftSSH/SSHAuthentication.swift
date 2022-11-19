@@ -6,7 +6,7 @@ public struct SSHAuthentication {
     public struct Password {
         public var password: String
 
-        public init(password: String) {
+        public init(_ password: String) {
             self.password = password
         }
     }
