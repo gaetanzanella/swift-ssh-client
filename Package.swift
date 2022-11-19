@@ -5,24 +5,29 @@ import PackageDescription
 
 let package = Package(
     name: "swift-ssh",
+    platforms: [
+        .iOS(.v13),
+        .macOS(.v11)
+    ],
     products: [
-        // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(
-            name: "swift-ssh",
-            targets: ["swift-ssh"]),
+            name: "SwiftSSH",
+            targets: ["SwiftSSH"]),
     ],
     dependencies: [
-        // Dependencies declare other packages that this package depends on.
-        // .package(url: /* package url */, from: "1.0.0"),
+        // TODO: Use version once available…
+        .package(url: "https://github.com/apple/swift-nio-ssh", revision: "d6940e991502ec779f94cb385df65fe48ea09504"),
+        .package(url: "https://github.com/apple/swift-crypto.git", "1.0.0" ..< "2.1.0"),
     ],
     targets: [
-        // Targets are the basic building blocks of a package. A target can define a module or a test suite.
-        // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
-            name: "swift-ssh",
-            dependencies: []),
+            name: "SwiftSSH",
+            dependencies: [
+                .product(name: "NIOSSH", package: "swift-nio-ssh"),
+                .product(name: "_CryptoExtras", package: "swift-crypto"),
+            ]),
         .testTarget(
-            name: "swift-sshTests",
-            dependencies: ["swift-ssh"]),
+            name: "SwiftSSHTests",
+            dependencies: ["SwiftSSH"]),
     ]
 )
