@@ -10,7 +10,7 @@ class SFTPTests: XCTestCase {
     var client: SFTPClient!
 
     override func setUp() {
-        sftpServer = SFTPServer(configuration: .local)
+        sftpServer = SFTPServer(configuration: .docker)
         connection = SSHConnection(
             host: sftpServer.host,
             port: sftpServer.port,

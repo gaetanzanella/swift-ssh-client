@@ -1,0 +1,15 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: macOS-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: isbang/compose-action@v1.4.1
+        with:
+          compose-file: "./Tests/Scripts/sftp-docker-compose.yaml"
+      - name: Tests
+        run: WORKING_DIR=$GITHUB_WORKSPACE swift test
