@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: "Version number"
+        required: true
+
+jobs:
+  build:
+    runs-on: macOS-latest
+    steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - uses: rickstaa/action-create-tag@v1
+        with:
+          tag: ${{ github.event.inputs.name }}
+          message: Release v${{ github.event.inputs.name }}
+          token: ${{ secrets.GZ_GITHUB_TOKEN }}
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ github.event.inputs.name }}
+          release_name: Release ${{ github.event.inputs.name }}
+          body: |
+            Changes in this release not available.
+          draft: false
+          prerelease: false

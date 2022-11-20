@@ -82,6 +82,7 @@ final class SFTPMessageSerializer: MessageToByteEncoder {
             out.writeInteger(fstat.requestId)
             out.writeSSHString(&fstat.handle)
         case .remove(let remove):
+            out.writeInteger(remove.requestId)
             out.writeSSHString(remove.filename)
         case .fsetstat(var fsetstat):
             out.writeSSHString(&fsetstat.payload.handle)
@@ -94,6 +95,10 @@ final class SFTPMessageSerializer: MessageToByteEncoder {
             out.writeSSHString(symlink.payload.targetPath)
         case .readlink(let readlink):
             out.writeSSHString(readlink.path)
+        case .rename(let rename):
+            out.writeInteger(rename.requestId)
+            out.writeSSHString(rename.payload.oldPath)
+            out.writeSSHString(rename.payload.newPath)
         }
         let length = out.writerIndex - lengthIndex - 4
         out.setInteger(UInt32(length), at: lengthIndex)
@@ -152,6 +157,8 @@ private extension SFTPMessage {
             return .attributes
         case .readdir:
             return .readdir
+        case .rename:
+            return .rename
         }
     }
 }

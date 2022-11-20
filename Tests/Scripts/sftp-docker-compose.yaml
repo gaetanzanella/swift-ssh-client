@@ -1,0 +1,11 @@
+
+version: "3.7"
+
+services:
+    sftp:
+        image: atmoz/sftp
+        volumes:
+            - ./distant:/home
+        ports:
+            - "2222:22"
+        command: user:password:1001::home

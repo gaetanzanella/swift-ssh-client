@@ -30,11 +30,9 @@ public final class SFTPFile {
     // MARK: - Public
 
     public func readAttributes(completion: @escaping (Result<SFTPFileAttributes, Error>) -> Void) {
-        channel.stat(path: path).whenComplete { result in
-            self.updateQueue.async {
-                completion(result.map { $0.attributes })
-            }
-        }
+        channel.stat(path: path)
+            .map { $0.attributes }
+            .whenComplete(on: updateQueue, completion)
     }
 
     public func read(from offset: UInt64 = 0,
@@ -55,11 +53,7 @@ public final class SFTPFile {
                     return Data()
                 }
             }
-            .whenComplete { result in
-                self.updateQueue.async {
-                    completion(result)
-                }
-            }
+            .whenComplete(on: updateQueue, completion)
     }
 
     public func write(_ data: Data,
@@ -74,11 +68,7 @@ public final class SFTPFile {
         )
         if let promise = promise {
             return promise
-                .whenComplete { result in
-                    self.updateQueue.async {
-                        completion(result)
-                    }
-                }
+                .whenComplete(on: updateQueue, completion)
         } else {
             self.updateQueue.async {
                 completion(.failure(SFTPError.invalidResponse))
@@ -88,7 +78,7 @@ public final class SFTPFile {
 
     public func close(completion: @escaping (Result<Void, Error>) -> Void) {
         channel.closeFile(handle)
-            .map { _ in }
+            .mapAsVoid()
             .whenComplete { result in
                 self.isActive = false
                 self.updateQueue.async {

@@ -394,6 +394,22 @@ struct SFTPMessageParser: ByteToMessageDecoder {
                     )
                 )
             )
+        case .rename:
+            guard
+                let requestId = payload.readInteger(as: UInt32.self),
+                let oldPath = payload.readSSHString(),
+                let newPath = payload.readSSHString()
+            else {
+                throw SFTPError.invalidPayload(type: type)
+            }
+
+            message = .rename(.init(
+                requestId: requestId,
+                payload: .init(
+                    oldPath: oldPath,
+                    newPath: newPath
+                )
+            ))
         case .extended, .extendedReply:
             throw SFTPError.invalidPayload(type: type)
         }

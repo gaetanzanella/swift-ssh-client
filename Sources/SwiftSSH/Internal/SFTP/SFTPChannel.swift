@@ -11,10 +11,13 @@ protocol SFTPChannel {
     func readFile(_ file: SFTPMessage.ReadFile.Payload) -> Future<SFTPMessage.ReadFile.Response>
     func writeFile(_ file: SFTPMessage.WriteFile.Payload) -> Future<SFTPMessage.Status>
     func mkdir(_ dir: SFTPMessage.MkDir.Payload) -> Future<SFTPMessage.Status>
+    func rmdir(path: String) -> Future<SFTPMessage.Status>
+    func rmFile(path: String) -> Future<SFTPMessage.Status>
     func readDir(_ handle: SFTPFileHandle) -> Future<SFTPMessage.ReadDir.Response>
     func openDir(path: String) -> Future<SFTPMessage.Handle>
     func realpath(path: String) -> Future<SFTPMessage.Name>
     func stat(path: String) -> Future<SFTPMessage.Attributes>
+    func rename(_ payload: SFTPMessage.Rename.Payload) -> Future<SFTPMessage.Status>
 }
 
 class IOSFTPChannel: SFTPChannel {
@@ -60,12 +63,7 @@ class IOSFTPChannel: SFTPChannel {
             self.send(.closeFile(.init(requestId: id, handle: file)))
         }
         .flatMapThrowing { response in
-            switch response {
-            case .status(let status):
-                return status
-            default:
-                throw SFTPError.invalidResponse
-            }
+            try self.mapStatus(response)
         }
     }
 
@@ -92,40 +90,38 @@ class IOSFTPChannel: SFTPChannel {
 
     func writeFile(_ file: SFTPMessage.WriteFile.Payload) -> Future<SFTPMessage.Status> {
         allocateRequestID().flatMap { id in
-                self.send(.write(.init(requestId: id, payload: file)))
-            }
-            .flatMapThrowing { response in
-                switch response {
-                case .status(let status):
-                    switch status.payload.errorCode {
-                    case .eof, .ok:
-                        return status
-                    default:
-                        throw SFTPError.invalidResponse
-                    }
-                default:
-                    throw SFTPError.invalidResponse
-                }
-            }
+            self.send(.write(.init(requestId: id, payload: file)))
+        }
+        .flatMapThrowing { response in
+            try self.mapStatus(response)
+        }
     }
 
     func mkdir(_ dir: SFTPMessage.MkDir.Payload) -> Future<SFTPMessage.Status> {
         allocateRequestID().flatMap { id in
-                self.send(.mkdir(.init(requestId: id, payload: dir)))
-            }
-            .flatMapThrowing { response in
-                switch response {
-                case .status(let status):
-                    switch status.payload.errorCode {
-                    case .eof, .ok:
-                        return status
-                    default:
-                        throw SFTPError.invalidResponse
-                    }
-                default:
-                    throw SFTPError.invalidResponse
-                }
-            }
+            self.send(.mkdir(.init(requestId: id, payload: dir)))
+        }
+        .flatMapThrowing { response in
+            try self.mapStatus(response)
+        }
+    }
+
+    func rmdir(path: String) -> Future<SFTPMessage.Status> {
+        allocateRequestID().flatMap { id in
+            self.send(.rmdir(.init(requestId: id, filePath: path)))
+        }
+        .flatMapThrowing { response in
+            try self.mapStatus(response)
+        }
+    }
+
+    func rmFile(path: String) -> Future<SFTPMessage.Status> {
+        allocateRequestID().flatMap { id in
+            self.send(.remove(.init(requestId: id, filename: path)))
+        }
+        .flatMapThrowing { response in
+            try self.mapStatus(response)
+        }
     }
 
     func readDir(_ handle: SFTPFileHandle) -> Future<SFTPMessage.ReadDir.Response> {
@@ -179,16 +175,25 @@ class IOSFTPChannel: SFTPChannel {
 
     func stat(path: String) -> Future<SFTPMessage.Attributes> {
         allocateRequestID().flatMap { id in
-                self.send(.stat(.init(requestId: id, path: path)))
+            self.send(.stat(.init(requestId: id, path: path)))
+        }
+        .flatMapThrowing { response in
+            switch response {
+            case .attributes(let attributes):
+                return attributes
+            default:
+                throw SFTPError.invalidResponse
             }
-            .flatMapThrowing { response in
-                switch response {
-                case .attributes(let attributes):
-                    return attributes
-                default:
-                    throw SFTPError.invalidResponse
-                }
-            }
+        }
+    }
+
+    func rename(_ payload: SFTPMessage.Rename.Payload) -> Future<SFTPMessage.Status> {
+        allocateRequestID().flatMap { id in
+            self.send(.rename(.init(requestId: id, payload: payload)))
+        }
+        .flatMapThrowing { response in
+            try self.mapStatus(response)
+        }
     }
 
     // MARK: - Private
@@ -203,6 +208,20 @@ class IOSFTPChannel: SFTPChannel {
         let promise = eventLoop.makePromise(of: SFTPResponse.self)
         trigger(.requestMessage(message, promise))
         return promise.futureResult
+    }
+
+    private func mapStatus(_ response: SFTPResponse) throws -> SFTPMessage.Status {
+        switch response {
+        case .status(let status):
+            switch status.payload.errorCode {
+            case .eof, .ok:
+                return status
+            default:
+                throw SFTPError.invalidResponse
+            }
+        default:
+            throw SFTPError.invalidResponse
+        }
     }
 
     private func trigger(_ event: SFTPClientEvent) {

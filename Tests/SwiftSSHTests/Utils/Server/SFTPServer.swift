@@ -130,7 +130,8 @@ extension SFTPServer {
             port: 2222,
             workingDirectory: "home/",
             urlResolver: { path in
-                URL(fileURLWithPath: "/") // TODO: Fix
+                URL(fileURLWithPath: ProcessInfo.processInfo.environment["WORKING_DIR"]!)
+                    .appendingPathComponent("Tests/Scripts/distant/user")
                     .appendingPathComponent(path)
                     .path
             }

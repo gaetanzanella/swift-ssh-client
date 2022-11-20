@@ -91,7 +91,24 @@ enum SFTPResponse {
             self = .attributes(message)
         case let .version(version):
             self = .version(version)
-        case .realpath, .openFile, .fstat, .closeFile, .read, .write, .initialize, .stat, .lstat, .rmdir, .opendir, .readdir, .remove, .fsetstat, .setstat, .symlink, .readlink:
+        case .realpath,
+                .openFile,
+                .fstat,
+                .closeFile,
+                .read,
+                .write,
+                .initialize,
+                .stat,
+                .lstat,
+                .rmdir,
+                .opendir,
+                .readdir,
+                .remove,
+                .fsetstat,
+                .setstat,
+                .symlink,
+                .readlink,
+                .rename:
             return nil
         }
     }
@@ -280,6 +297,17 @@ enum SFTPMessage {
         let requestId: SFTPRequestID
         var handle: SFTPFileHandle
     }
+
+    struct Rename {
+
+        struct Payload {
+            let oldPath: String
+            let newPath: String
+        }
+
+        let requestId: SFTPRequestID
+        let payload: Payload
+    }
     
     /// Client.
     ///
@@ -347,6 +375,7 @@ enum SFTPMessage {
     case name(Name)
     case attributes(Attributes)
     case readdir(ReadDir)
+    case rename(Rename)
 
     var requestID: SFTPRequestID? {
         switch self {
@@ -396,6 +425,8 @@ enum SFTPMessage {
             return attributes.requestId
         case .readdir(let readDir):
             return readDir.requestId
+        case .rename(let rename):
+            return rename.requestId
         }
     }
 }
