@@ -8,8 +8,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: isbang/compose-action@v1.4.1
-        with:
-          compose-file: "./Tests/Scripts/sftp-docker-compose.yaml"
+      - uses: docker-practice/actions-setup-docker@master
+      - run: docker-compose -p sftp-integration -f ./Tests/Scripts/sftp-docker-compose.yaml up -d
       - name: Tests
         run: WORKING_DIR=$GITHUB_WORKSPACE swift test
