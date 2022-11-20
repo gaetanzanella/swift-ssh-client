@@ -395,6 +395,87 @@ class SFTPTests: XCTestCase {
         wait(for: [exp], timeout: 3)
     }
 
+    // MARK: - Moving
+
+    func testMovingFile() throws {
+        let client = try launchSFTPClient()
+        let filePath = sftpServer.preferredWorkingDirectoryPath(components: "test.test")
+        let fileContent = "helloworld".data(using: .utf8)!
+        sftpServer.createFile(atPath: filePath, contents: fileContent)
+        let newPath = sftpServer.preferredWorkingDirectoryPath(components: "new/new.test")
+        try sftpServer.createDirectory(atPath: sftpServer.preferredWorkingDirectoryPath(components: "new"))
+        let exp = XCTestExpectation()
+        client.moveItem(atPath: filePath, toPath: newPath) { result in
+            XCTAssertTrue(result.isSuccess)
+            XCTAssertFalse(self.sftpServer.fileExists(atPath: filePath))
+            XCTAssertEqual(
+                self.sftpServer.contentOfFile(atPath: newPath),
+                fileContent
+            )
+            exp.fulfill()
+        }
+        wait(for: [exp], timeout: 3)
+    }
+
+    func testMovingDirectory() throws {
+        let client = try launchSFTPClient()
+        // first
+        let dir1Path = sftpServer.preferredWorkingDirectoryPath(components: "DIR1")
+        try sftpServer.createDirectory(atPath: dir1Path)
+        let filePath = sftpServer.preferredWorkingDirectoryPath(components: "DIR1/file.test")
+        let fileContent = "helloworld".data(using: .utf8)!
+        sftpServer.createFile(atPath: filePath, contents: fileContent)
+
+        // second
+        let dir2Path = sftpServer.preferredWorkingDirectoryPath(components: "DIR2")
+        try sftpServer.createDirectory(atPath: dir2Path)
+        let dst = sftpServer.preferredWorkingDirectoryPath(components: "DIR2/DIR1_NEW")
+        let fileDst = sftpServer.preferredWorkingDirectoryPath(components: "DIR2/DIR1_NEW/file.test")
+        let exp = XCTestExpectation()
+        client.moveItem(atPath: dir1Path, toPath: dst) { result in
+            XCTAssertTrue(result.isSuccess)
+            XCTAssertFalse(self.sftpServer.fileExists(atPath: dir1Path))
+            XCTAssertTrue(self.sftpServer.fileExists(atPath: dst))
+            XCTAssertEqual(
+                self.sftpServer.contentOfFile(atPath: fileDst),
+                fileContent
+            )
+            exp.fulfill()
+        }
+        wait(for: [exp], timeout: 30)
+    }
+
+    // MARK: - Deleting
+
+    func testDeletingFile() throws {
+        let client = try launchSFTPClient()
+        let filePath = sftpServer.preferredWorkingDirectoryPath(components: "test.test")
+        let fileContent = "helloworld".data(using: .utf8)!
+        sftpServer.createFile(atPath: filePath, contents: fileContent)
+        XCTAssertTrue(self.sftpServer.fileExists(atPath: filePath))
+        let exp = XCTestExpectation()
+        client.removeFile(atPath: filePath) { result in
+            XCTAssertTrue(result.isSuccess)
+            XCTAssertFalse(self.sftpServer.fileExists(atPath: filePath))
+            exp.fulfill()
+        }
+        wait(for: [exp], timeout: 3)
+    }
+
+    func testDeletingDirectory() throws {
+        let client = try launchSFTPClient()
+        let filePath = sftpServer.preferredWorkingDirectoryPath(components: "test")
+        try sftpServer.createDirectory(atPath: filePath)
+        XCTAssertTrue(self.sftpServer.fileExists(atPath: filePath))
+        let exp = XCTestExpectation()
+        client.removeDirectory(atPath: filePath) { result in
+            XCTAssertTrue(result.isSuccess)
+            XCTAssertFalse(self.sftpServer.fileExists(atPath: filePath))
+            exp.fulfill()
+        }
+        wait(for: [exp], timeout: 3)
+    }
+
     // MARK: - Errors
 
     func testDisconnectionError() throws {

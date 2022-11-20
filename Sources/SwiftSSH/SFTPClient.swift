@@ -49,21 +49,14 @@ public final class SFTPClient {
                 response: []
             )
         }
-        .whenComplete { (result: Result<[SFTPPathComponent], Error>) in
-            self.updateQueue.async {
-                completion(result)
-            }
-        }
+        .whenComplete(on: updateQueue, completion)
     }
 
     public func getAttributes(at filePath: String,
                               completion: @escaping ((Result<SFTPFileAttributes, Error>) -> Void)) {
         sftpChannel.stat(path: filePath)
-            .whenComplete { result in
-                self.updateQueue.async {
-                    completion(result.map { $0.attributes })
-                }
-            }
+            .map { $0.attributes }
+            .whenComplete(on: updateQueue, completion)
     }
 
     public func openFile(filePath: String,
@@ -85,11 +78,7 @@ public final class SFTPClient {
                     updateQueue: updateQueue
                 )
             }
-            .whenComplete { result in
-                self.updateQueue.async {
-                    completion(result)
-                }
-            }
+            .whenComplete(on: updateQueue, completion)
     }
 
     public func withFile(filePath: String,
@@ -122,20 +111,40 @@ public final class SFTPClient {
             attributes: attributes
         )
         return sftpChannel.mkdir(message)
-            .map { _ in }
-            .whenComplete { result in
-                self.updateQueue.async {
-                    completion(result)
-                }
-            }
+            .mapAsVoid()
+            .whenComplete(on: updateQueue, completion)
+    }
+
+    public func moveItem(atPath current: String,
+                         toPath destination: String,
+                         completion: @escaping ((Result<Void, Error>) -> Void)) {
+        let message = SFTPMessage.Rename.Payload(oldPath: current, newPath: destination)
+        return sftpChannel.rename(message)
+            .mapAsVoid()
+            .whenComplete(on: updateQueue, completion)
+    }
+
+    public func removeDirectory(atPath path: String,
+                                completion: @escaping ((Result<Void, Error>) -> Void)) {
+        return sftpChannel.rmdir(path: path)
+            .mapAsVoid()
+            .whenComplete(on: updateQueue, completion)
+    }
+
+    public func removeFile(atPath path: String,
+                           completion: @escaping ((Result<Void, Error>) -> Void)) {
+        sftpChannel
+            .rmFile(path: path)
+            .mapAsVoid()
+            .whenComplete(on: updateQueue, completion)
     }
 
     public func close(completion: @escaping () -> Void) {
-        sftpChannel.close().whenComplete { _ in
-            self.updateQueue.async {
+        sftpChannel
+            .close()
+            .whenComplete(on: updateQueue) { _ in
                 completion()
             }
-        }
     }
 
     // MARK: - Private
