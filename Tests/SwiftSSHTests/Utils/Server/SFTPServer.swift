@@ -48,6 +48,7 @@ class SFTPServer {
         if let components = components {
             return url.appendingPathComponent(components).path
         }
+        print(url.path)
         return url.path
     }
 

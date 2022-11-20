@@ -90,30 +90,20 @@ class IOSFTPChannel: SFTPChannel {
 
     func writeFile(_ file: SFTPMessage.WriteFile.Payload) -> Future<SFTPMessage.Status> {
         allocateRequestID().flatMap { id in
-                self.send(.write(.init(requestId: id, payload: file)))
-            }
-            .flatMapThrowing { response in
-                try self.mapStatus(response)
-            }
+            self.send(.write(.init(requestId: id, payload: file)))
+        }
+        .flatMapThrowing { response in
+            try self.mapStatus(response)
+        }
     }
 
     func mkdir(_ dir: SFTPMessage.MkDir.Payload) -> Future<SFTPMessage.Status> {
         allocateRequestID().flatMap { id in
-                self.send(.mkdir(.init(requestId: id, payload: dir)))
-            }
-            .flatMapThrowing { response in
-                switch response {
-                case .status(let status):
-                    switch status.payload.errorCode {
-                    case .eof, .ok:
-                        return status
-                    default:
-                        throw SFTPError.invalidResponse
-                    }
-                default:
-                    throw SFTPError.invalidResponse
-                }
-            }
+            self.send(.mkdir(.init(requestId: id, payload: dir)))
+        }
+        .flatMapThrowing { response in
+            try self.mapStatus(response)
+        }
     }
 
     func rmdir(path: String) -> Future<SFTPMessage.Status> {
