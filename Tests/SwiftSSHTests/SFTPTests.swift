@@ -38,17 +38,14 @@ class SFTPTests: XCTestCase {
         let client = try launchSFTPClient()
         let path = sftpServer.preferredWorkingDirectoryPath(components: "new")
         let exp = XCTestExpectation()
-        print("MAKING DIRECTORY AT", path)
         client.createDirectory(
             atPath: path
         ) { result in
-            print("MAKING DIRECTORY RESULT", result)
             XCTAssertTrue(result.isSuccess)
             XCTAssertTrue(self.sftpServer.fileExists(atPath: path))
             exp.fulfill()
         }
         wait(for: [exp], timeout: 5.0)
-        print("ENDING MAKING DIRECTORY AT", path)
     }
 
     func testListDirectory() throws {
