@@ -8,6 +8,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      - run: brew install swiftformat
+      - run: sh Tests/Scripts/check-format.sh
       - uses: docker-practice/actions-setup-docker@master
       - run: docker-compose -p sftp-integration -f ./Tests/Scripts/sftp-docker-compose.yaml up -d
       - name: Tests
