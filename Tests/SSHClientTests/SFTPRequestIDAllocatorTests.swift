@@ -4,7 +4,6 @@ import Foundation
 import XCTest
 
 class SFTPRequestIDAllocatorTests: XCTestCase {
-
     func testMonotonicBehavior() {
         var counter = MonotonicRequestIDAllocator(start: 0)
         XCTAssertEqual(counter.allocateRequestID(), 0)

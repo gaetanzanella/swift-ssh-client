@@ -5,14 +5,14 @@ enum SFTPProtocolVersion: RawRepresentable, Hashable, Comparable {
     /// - Note: This is by far the most commonly implemented version of SFTP and the only one
     ///   currently supported by this implementation at the time of this writing.
     case v3
-    
+
     /// A catchall for any other protocol version that may appear.
     ///
     /// Because this implementation, like most others, only supports protocol version 3, there
     /// seems little use to listing the various others, as most were never implemented by anyone
     /// at all and the rest never saw any significant adoption.
     case unsupported(UInt32)
-    
+
     // See `RawRepresentable.rawValue`.
     var rawValue: UInt32 {
         switch self {
@@ -20,7 +20,7 @@ enum SFTPProtocolVersion: RawRepresentable, Hashable, Comparable {
         case .unsupported(let n): return n
         }
     }
-    
+
     // See `RawRepresentable.init(rawValue:)`.
     init?(rawValue: UInt32) {
         switch rawValue {
@@ -56,16 +56,16 @@ enum SFTPMessageType: UInt8 {
     case rename = 18
     case readlink = 19
     case symlink = 20
-    
+
     case status = 101
     case handle = 102
     case data = 103
     case name = 104
     case attributes = 105
-    
+
     case extended = 200
     case extendedReply = 201
-    
+
     var description: String {
         switch self {
         case .initialize: return "SSH_FXP_INIT"
@@ -94,7 +94,7 @@ enum SFTPMessageType: UInt8 {
         case .data: return "SSH_FXP_DATA"
         case .name: return "SSH_FXP_NAME"
         case .attributes: return "SSH_FXP_ATTRS"
-        
+
         case .extended: return "SSH_FXP_EXTENDED"
         case .extendedReply: return "SSH_FXP_EXTENDED_REPLY"
         }
@@ -112,7 +112,7 @@ enum SFTPStatusCode: RawRepresentable, Hashable, CustomDebugStringConvertible {
     case connectionLost
     case unsupportedOperation
     case unknown(UInt32)
-    
+
     var rawValue: UInt32 {
         switch self {
         case .ok: return 0
@@ -127,7 +127,7 @@ enum SFTPStatusCode: RawRepresentable, Hashable, CustomDebugStringConvertible {
         case .unknown(let value): return value
         }
     }
-    
+
     init?(rawValue: UInt32) {
         switch rawValue {
         case 0: self = .ok
@@ -142,7 +142,7 @@ enum SFTPStatusCode: RawRepresentable, Hashable, CustomDebugStringConvertible {
         case let value: self = .unknown(value)
         }
     }
-    
+
     init(_ rawValue: UInt32) {
         self.init(rawValue: rawValue)!
     }

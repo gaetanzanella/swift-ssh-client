@@ -7,12 +7,13 @@ let package = Package(
     name: "swift-ssh-client",
     platforms: [
         .iOS(.v13),
-        .macOS(.v11)
+        .macOS(.v11),
     ],
     products: [
         .library(
             name: "SSHClient",
-            targets: ["SSHClient"]),
+            targets: ["SSHClient"]
+        ),
     ],
     dependencies: [
         // TODO: Use version once available…
@@ -25,9 +26,11 @@ let package = Package(
             dependencies: [
                 .product(name: "NIOSSH", package: "swift-nio-ssh"),
                 .product(name: "_CryptoExtras", package: "swift-crypto"),
-            ]),
+            ]
+        ),
         .testTarget(
             name: "SSHClientTests",
-            dependencies: ["SSHClient"]),
+            dependencies: ["SSHClient"]
+        ),
     ]
 )

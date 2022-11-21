@@ -3,7 +3,6 @@ import NIO
 import NIOSSH
 
 public class SSHConnection {
-
     public enum ConnectionError: Error {
         case requireActiveConnection
         case unknown
@@ -92,15 +91,15 @@ public class SSHConnection {
             }
         }
         switch action {
-        case let .connect(timeout):
+        case .connect(let timeout):
             connect(timeout: timeout)
-        case let .disconnect(channel):
+        case .disconnect(let channel):
             disconnect(channel: channel)
-        case let .callErrorCompletion(list, error):
+        case .callErrorCompletion(let list, let error):
             updateQueue.async {
                 list.forEach { $0(error) }
             }
-        case let .callCompletion(list):
+        case .callCompletion(let list):
             updateQueue.async {
                 list.forEach { $0(()) }
             }
@@ -109,9 +108,10 @@ public class SSHConnection {
         }
     }
 
-    private func start<Session: SSHSession>(_ session: Session.Type,
+    private func start<Session: SSHSession>(_: Session.Type,
                                             timeout: TimeInterval,
-                                            configuration: Session.Configuration) -> Future<Session> {
+                                            configuration: Session.Configuration) -> Future<Session>
+    {
         eventLoop
             .submit { () throws -> Channel in
                 if let channel = self.channel {
@@ -145,11 +145,11 @@ public class SSHConnection {
                                 return createSession.futureResult
                             }
                             .map { (client: Session) in
-                                return client
+                                client
                             }
                             .flatMapError { error in
                                 // we close the created channel and spread the error
-                                return channel
+                                channel
                                     .close()
                                     .flatMapThrowing { _ -> Session in
                                         throw error
@@ -185,12 +185,12 @@ public class SSHConnection {
                     self?.updateState(
                         event: .error(error)
                     )
-                }
+                },
             ])
         }
-            .connectTimeout(.seconds(Int64(timeout)))
-            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .channelOption(ChannelOptions.socket(SocketOptionLevel(IPPROTO_TCP), TCP_NODELAY), value: 1)
+        .connectTimeout(.seconds(Int64(timeout)))
+        .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+        .channelOption(ChannelOptions.socket(SocketOptionLevel(IPPROTO_TCP), TCP_NODELAY), value: 1)
         let channel = bootstrap.connect(host: host, port: Int(port))
             .flatMap { [weak self] channel -> EventLoopFuture<Channel> in
                 self?.updateState(event: .connected(channel))
@@ -208,9 +208,9 @@ public class SSHConnection {
                     break
                 case .failure(SSHAuthenticationHandler.AuthenticationError.timeout):
                     self?.updateState(event: .error(.timeout))
-                case let .failure(error):
+                case .failure(let error):
                     self?.updateState(event: .error((error as? SSHConnection.ConnectionError) ?? .unknown))
-                case let .success(channel):
+                case .success(let channel):
                     self?.updateState(event: .authenticated(channel))
                 }
             }
@@ -228,7 +228,5 @@ public class SSHConnection {
 }
 
 extension MultiThreadedEventLoopGroup {
-
     static let ssh = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 }
-

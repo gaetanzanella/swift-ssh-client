@@ -1,8 +1,7 @@
-import NIO
 import Foundation
+import NIO
 
 public final class SFTPFile {
-
     private var isActive: Bool
 
     private let handle: SFTPFileHandle
@@ -16,7 +15,7 @@ public final class SFTPFile {
          path: String,
          handle: SFTPFileHandle,
          updateQueue: DispatchQueue) {
-        self.isActive = true
+        isActive = true
         self.handle = handle
         self.channel = channel
         self.path = path
@@ -46,7 +45,7 @@ public final class SFTPFile {
         channel.readFile(message)
             .map { (response: SFTPMessage.ReadFile.Response) -> Data in
                 switch response {
-                case let .fileData(data):
+                case .fileData(let data):
                     var d = data.data
                     return d.readData(length: d.readableBytes) ?? Data()
                 case .status:
@@ -60,7 +59,7 @@ public final class SFTPFile {
                       at offset: UInt64 = 0,
                       completion: @escaping (Result<Void, Error>) -> Void) {
         let data = ByteBuffer(data: data)
-        let sliceLength = 32_000
+        let sliceLength = 32000
         let promise = writeSlice(
             data: data,
             sliceLength: sliceLength,
@@ -70,7 +69,7 @@ public final class SFTPFile {
             return promise
                 .whenComplete(on: updateQueue, completion)
         } else {
-            self.updateQueue.async {
+            updateQueue.async {
                 completion(.failure(SFTPError.invalidResponse))
             }
         }

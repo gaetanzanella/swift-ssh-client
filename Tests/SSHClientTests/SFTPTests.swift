@@ -4,7 +4,6 @@ import SSHClient
 import XCTest
 
 class SFTPTests: XCTestCase {
-
     var sftpServer: SFTPServer!
     var connection: SSHConnection!
     var client: SFTPClient!
@@ -56,13 +55,13 @@ class SFTPTests: XCTestCase {
         let exp = XCTestExpectation()
         client.listDirectory(atPath: path) { result in
             switch result {
-            case let .success(content):
+            case .success(let content):
                 let received = content.map { $0.filename }
                 XCTAssertEqual(
                     received.sorted(),
                     (files + [".", ".."]).sorted()
                 )
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail(error.localizedDescription)
             }
             exp.fulfill()
@@ -79,7 +78,7 @@ class SFTPTests: XCTestCase {
         let exp1 = XCTestExpectation()
         let inner1 = XCTestExpectation()
         inner1.isInverted = true
-        client.withFile(filePath: path, flags: []) { file, completion in
+        client.withFile(filePath: path, flags: []) { _, completion in
             inner1.fulfill()
             completion()
         } completion: { result in
@@ -91,7 +90,7 @@ class SFTPTests: XCTestCase {
         // with create
         let exp = XCTestExpectation()
         let inner = XCTestExpectation()
-        client.withFile(filePath: path, flags: [.create]) { file, completion in
+        client.withFile(filePath: path, flags: [.create]) { _, completion in
             inner.fulfill()
             completion()
         } completion: { result in
@@ -116,7 +115,7 @@ class SFTPTests: XCTestCase {
         let exp = XCTestExpectation()
         let inner = XCTestExpectation()
         inner.isInverted = true
-        client.withFile(filePath: path, flags: [.create, .forceCreate]) { file, completion in
+        client.withFile(filePath: path, flags: [.create, .forceCreate]) { _, completion in
             inner.fulfill()
             completion()
         } completion: { result in
@@ -132,7 +131,7 @@ class SFTPTests: XCTestCase {
         sftpServer.createFile(atPath: path, contents: "hello.world".data(using: .utf8)!)
         let exp = XCTestExpectation()
         let inner = XCTestExpectation()
-        client.withFile(filePath: path, flags: [.truncate]) { file, completion in
+        client.withFile(filePath: path, flags: [.truncate]) { _, completion in
             inner.fulfill()
             completion()
         } completion: { result in
@@ -163,7 +162,7 @@ class SFTPTests: XCTestCase {
             group.enter()
             file.read { result in
                 switch result {
-                case let .success(data):
+                case .success(let data):
                     XCTAssertEqual(
                         data,
                         fileContent
@@ -175,10 +174,10 @@ class SFTPTests: XCTestCase {
             }
             // partial
             group.enter()
-            let slice = 3..<5
+            let slice = 3 ..< 5
             file.read(from: UInt64(slice.lowerBound), length: UInt32(slice.count)) { result in
                 switch result {
-                case let .success(data):
+                case .success(let data):
                     XCTAssertEqual(
                         data,
                         fileContent[slice]
@@ -314,7 +313,7 @@ class SFTPTests: XCTestCase {
         let modificationDate = sftpServer.itemModificationDate(atPath: path)
         // from client
         let exp = XCTestExpectation()
-        client.getAttributes(at: path) { (result: Result<SFTPFileAttributes, Error>) -> Void in
+        client.getAttributes(at: path) { (result: Result<SFTPFileAttributes, Error>) in
             switch result {
             case .success(let attributes):
                 XCTAssertEqual(data.count, attributes.size.flatMap { Int($0) })
@@ -362,7 +361,7 @@ class SFTPTests: XCTestCase {
         sftpServer.createFile(atPath: filePath, contents: "helloworld".data(using: .utf8)!)
         let group = DispatchGroup()
         let exp = XCTestExpectation()
-        for _ in 0..<100 {
+        for _ in 0 ..< 100 {
             group.enter()
             client.getAttributes(at: filePath) { result in
                 group.leave()
@@ -448,7 +447,7 @@ class SFTPTests: XCTestCase {
         let filePath = sftpServer.preferredWorkingDirectoryPath(components: "test.test")
         let fileContent = "helloworld".data(using: .utf8)!
         sftpServer.createFile(atPath: filePath, contents: fileContent)
-        XCTAssertTrue(self.sftpServer.fileExists(atPath: filePath))
+        XCTAssertTrue(sftpServer.fileExists(atPath: filePath))
         let exp = XCTestExpectation()
         client.removeFile(atPath: filePath) { result in
             XCTAssertTrue(result.isSuccess)
@@ -462,7 +461,7 @@ class SFTPTests: XCTestCase {
         let client = try launchSFTPClient()
         let filePath = sftpServer.preferredWorkingDirectoryPath(components: "test")
         try sftpServer.createDirectory(atPath: filePath)
-        XCTAssertTrue(self.sftpServer.fileExists(atPath: filePath))
+        XCTAssertTrue(sftpServer.fileExists(atPath: filePath))
         let exp = XCTestExpectation()
         client.removeDirectory(atPath: filePath) { result in
             XCTAssertTrue(result.isSuccess)

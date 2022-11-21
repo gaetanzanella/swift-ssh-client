@@ -3,7 +3,6 @@ import NIO
 import NIOSSH
 
 public class SSHShell {
-
     public enum State: Equatable {
         case ready, closed, failed(SSHConnection.ConnectionError)
     }
@@ -66,7 +65,6 @@ public class SSHShell {
 }
 
 final class SSHShellSession: SSHSession {
-
     struct Configuration {
         let updateQueue: DispatchQueue
     }
@@ -91,7 +89,7 @@ final class SSHShellSession: SSHSession {
                 }),
                 ErrorHandler(onClose: { [weak shell] error in
                     shell?.onClose(error: error)
-                })
+                }),
             ]
         )
         .flatMap {

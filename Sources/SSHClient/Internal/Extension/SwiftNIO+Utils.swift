@@ -2,7 +2,6 @@
 import Foundation
 
 extension Future {
-
     func mapAsVoid() -> Future<Void> {
         map { _ in }
     }

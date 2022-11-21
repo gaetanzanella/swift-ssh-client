@@ -3,15 +3,12 @@ import Foundation
 import XCTest
 
 extension XCTestCase {
-
     func wait(timeout: TimeInterval) {
         _ = XCTWaiter.wait(for: [expectation(description: "Wait for n seconds")], timeout: timeout)
-
     }
 }
 
 extension Result {
-
     var isSuccess: Bool {
         switch self {
         case .success:

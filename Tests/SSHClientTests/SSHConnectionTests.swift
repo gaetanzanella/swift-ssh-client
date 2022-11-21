@@ -4,7 +4,6 @@ import SSHClient
 import XCTest
 
 class SSHConnectionTests: XCTestCase {
-
     var server: SSHServer!
 
     override func setUp() {
@@ -41,7 +40,6 @@ class SSHConnectionTests: XCTestCase {
         }
         wait(for: [expect], timeout: 3)
     }
-
 
     func testWrongPortConnection() throws {
         let connection = EmbeddedConnection(
@@ -109,7 +107,7 @@ class SSHConnectionTests: XCTestCase {
         let connectionExp = XCTestExpectation()
         connection.ssh.start(withTimeout: 3.0) { _ in connectionExp.fulfill() }
         wait(for: [connectionExp], timeout: 3)
-        XCTAssertTrue(self.server.hasActiveChild)
+        XCTAssertTrue(server.hasActiveChild)
         let disconnectionExp = XCTestExpectation()
         connection.ssh.end {
             XCTAssertEqual(connection.state, .idle)
@@ -194,12 +192,9 @@ class SSHConnectionTests: XCTestCase {
     }
 
     // MARK: - Shell
-
-    
 }
 
 class EmbeddedConnection {
-
     let ssh: SSHConnection
 
     var state: SSHConnection.State {
@@ -209,7 +204,7 @@ class EmbeddedConnection {
     private(set) var updates: [SSHConnection.State] = []
 
     init(host: String, port: UInt16, username: String, password: String) {
-        self.ssh = SSHConnection(
+        ssh = SSHConnection(
             host: host,
             port: port,
             authentication: .init(

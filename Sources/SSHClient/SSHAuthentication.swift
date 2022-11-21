@@ -2,7 +2,6 @@
 import Foundation
 
 public struct SSHAuthentication {
-
     public struct Password {
         public var password: String
 
@@ -24,10 +23,8 @@ public struct SSHAuthentication {
 
 import NIOSSH
 
-extension SSHAuthentication {
-
-    public struct Method {
-
+public extension SSHAuthentication {
+    struct Method {
         enum Implementation {
             case none
             case password(Password)
@@ -50,10 +47,8 @@ extension SSHAuthentication {
     }
 }
 
-extension SSHAuthentication {
-
-    public struct HostKeyValidation {
-
+public extension SSHAuthentication {
+    struct HostKeyValidation {
         enum Implementation {
             case acceptAll
             case custom(NIOSSHClientServerAuthenticationDelegate)

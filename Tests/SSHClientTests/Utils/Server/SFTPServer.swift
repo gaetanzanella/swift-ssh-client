@@ -3,7 +3,6 @@ import Foundation
 import SSHClient
 
 class SFTPServer {
-
     private let fileManager: FileManager
     private let configuration: Configuration
 
@@ -37,7 +36,7 @@ class SFTPServer {
 
     init(configuration: Configuration) {
         self.configuration = configuration
-        self.fileManager = .default
+        fileManager = .default
         fileManager.changeCurrentDirectoryPath("../")
     }
 
@@ -52,7 +51,7 @@ class SFTPServer {
     }
 
     func itemModificationDate(atPath path: String) -> Date? {
-        return try? fileManager.attributesOfItem(atPath: resolvePath(path))[.modificationDate] as? Date
+        try? fileManager.attributesOfItem(atPath: resolvePath(path))[.modificationDate] as? Date
     }
 
     func createDirectory(atPath path: String) throws {
@@ -87,7 +86,7 @@ class SFTPServer {
         let url = URL(fileURLWithPath: resolvePath(path))
         let id = UUID().uuidString
         var names: [String] = []
-        for i in 0..<count {
+        for i in 0 ..< count {
             let name = "\(i)_\(id)"
             names.append(name)
             let fileURL = url.appendingPathComponent("\(i)_\(id)")
@@ -105,7 +104,6 @@ class SFTPServer {
 }
 
 extension SFTPServer {
-
     struct Configuration {
         let username: String
         let password: String

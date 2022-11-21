@@ -4,7 +4,6 @@ import NIO
 import NIOSSH
 
 class StartShellHandler: ChannelInboundHandler {
-
     enum StartShellError: Error {
         case endedChannel
     }
@@ -15,7 +14,7 @@ class StartShellHandler: ChannelInboundHandler {
 
     init(eventLoop: EventLoop) {
         let promise = eventLoop.makePromise(of: Void.self)
-        self.startPromise = promise
+        startPromise = promise
     }
 
     deinit {
@@ -44,8 +43,7 @@ class StartShellHandler: ChannelInboundHandler {
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case is ChannelSuccessEvent:
-            self.startPromise.succeed(())
-            break
+            startPromise.succeed(())
         default:
             context.fireUserInboundEventTriggered(event)
         }
@@ -53,7 +51,6 @@ class StartShellHandler: ChannelInboundHandler {
 }
 
 class ReadShellHandler: ChannelInboundHandler {
-
     typealias InboundIn = SSHChannelData
 
     let onData: (Data) -> Void
@@ -80,7 +77,6 @@ class ReadShellHandler: ChannelInboundHandler {
 }
 
 class ErrorHandler: ChannelInboundHandler {
-
     typealias InboundIn = SSHChannelData
 
     let onClose: (SSHConnection.ConnectionError) -> Void
@@ -95,7 +91,7 @@ class ErrorHandler: ChannelInboundHandler {
         _ = context.close()
     }
 
-    func channelInactive(context: ChannelHandlerContext) {
+    func channelInactive(context _: ChannelHandlerContext) {
         onClose(.requireActiveConnection)
     }
 }

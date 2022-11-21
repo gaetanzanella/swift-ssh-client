@@ -6,11 +6,10 @@ protocol SFTPRequestIDAllocator {
 }
 
 struct MonotonicRequestIDAllocator: SFTPRequestIDAllocator {
-
     private var i: SFTPRequestID
 
     init(start: SFTPRequestID) {
-        self.i = start
+        i = start
     }
 
     mutating func allocateRequestID() -> SFTPRequestID {

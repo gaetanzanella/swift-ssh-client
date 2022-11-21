@@ -1,10 +1,9 @@
 
+import Foundation
 import NIO
 import NIOCore
-import Foundation
 
 protocol SFTPChannel {
-
     func close() -> Future<Void>
 
     func openFile(_ file: SFTPMessage.OpenFile.Payload) -> Future<SFTPMessage.Handle>
@@ -22,7 +21,6 @@ protocol SFTPChannel {
 }
 
 class IOSFTPChannel: SFTPChannel {
-
     private var stateMachine: SFTPClientStateMachine
     private let eventLoop: EventLoop
     private var idAllocator: SFTPRequestIDAllocator
@@ -127,51 +125,51 @@ class IOSFTPChannel: SFTPChannel {
 
     func readDir(_ handle: SFTPFileHandle) -> Future<SFTPMessage.ReadDir.Response> {
         allocateRequestID().flatMap { id in
-                self.send(.readdir(.init(requestId: id, handle: handle)))
-            }
-            .flatMapThrowing { response in
-                switch response {
-                case .status(let status):
-                    switch status.payload.errorCode {
-                    case .eof, .ok:
-                        return .status(status)
-                    default:
-                        throw SFTPError.invalidResponse
-                    }
-                case .name(let name):
-                    return .name(name)
+            self.send(.readdir(.init(requestId: id, handle: handle)))
+        }
+        .flatMapThrowing { response in
+            switch response {
+            case .status(let status):
+                switch status.payload.errorCode {
+                case .eof, .ok:
+                    return .status(status)
                 default:
                     throw SFTPError.invalidResponse
                 }
+            case .name(let name):
+                return .name(name)
+            default:
+                throw SFTPError.invalidResponse
             }
+        }
     }
 
     func openDir(path: String) -> Future<SFTPMessage.Handle> {
         allocateRequestID().flatMap { id in
-                self.send(.opendir(.init(requestId: id, path: path)))
+            self.send(.opendir(.init(requestId: id, path: path)))
+        }
+        .flatMapThrowing { response in
+            switch response {
+            case .handle(let handle):
+                return handle
+            default:
+                throw SFTPError.invalidResponse
             }
-            .flatMapThrowing { response in
-                switch response {
-                case .handle(let handle):
-                    return handle
-                default:
-                    throw SFTPError.invalidResponse
-                }
-            }
+        }
     }
 
     func realpath(path: String) -> Future<SFTPMessage.Name> {
         allocateRequestID().flatMap { id in
-                self.send(.realpath(.init(requestId: id, path: path)))
+            self.send(.realpath(.init(requestId: id, path: path)))
+        }
+        .flatMapThrowing { response in
+            switch response {
+            case .name(let name):
+                return name
+            default:
+                throw SFTPError.invalidResponse
             }
-            .flatMapThrowing { response in
-                switch response {
-                case .name(let name):
-                    return name
-                default:
-                    throw SFTPError.invalidResponse
-                }
-            }
+        }
     }
 
     func stat(path: String) -> Future<SFTPMessage.Attributes> {
@@ -234,18 +232,18 @@ class IOSFTPChannel: SFTPChannel {
 
     private func handle(_ action: SFTPClientAction) {
         switch action {
-        case let .emitMessage(message, channel):
+        case .emitMessage(let message, let channel):
             channel
                 .writeAndFlush(message)
                 .whenComplete { [weak self] result in
                     switch result {
                     case .success:
                         self?.trigger(.messageSent(message))
-                    case let .failure(error):
+                    case .failure(let error):
                         self?.trigger(.messageFailed(message, error))
                     }
                 }
-        case let .disconnect(channel):
+        case .disconnect(let channel):
             // SFTPChannel already listens `close` event in `launch`
             _ = channel
                 .close()
@@ -258,7 +256,6 @@ class IOSFTPChannel: SFTPChannel {
 import NIOSSH
 
 final class SFTPSession: SSHSession {
-
     struct Configuration {
         let updateQueue: DispatchQueue
     }
@@ -300,10 +297,10 @@ final class SFTPSession: SSHSession {
             .futureResult
             .map { channel }
             .flatMap { channel in
-                return channel.pipeline.addHandlers(
+                channel.pipeline.addHandlers(
                     [
                         SSHChannelDataUnwrapper(),
-                        SSHOutboundChannelDataWrapper()
+                        SSHOutboundChannelDataWrapper(),
                     ]
                 )
                 .map { channel }

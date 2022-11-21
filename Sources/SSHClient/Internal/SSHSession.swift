@@ -4,7 +4,6 @@ import NIOCore
 import NIOSSH
 
 protocol SSHSession {
-
     associatedtype Configuration
 
     static func launch(on channel: Channel,

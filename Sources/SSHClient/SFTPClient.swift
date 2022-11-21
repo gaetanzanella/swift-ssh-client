@@ -3,7 +3,6 @@ import NIO
 import NIOCore
 
 public final class SFTPClient {
-
     private let updateQueue: DispatchQueue
     private var sftpChannel: SFTPChannel
 
@@ -18,29 +17,30 @@ public final class SFTPClient {
     // MARK: - Public
 
     public func listDirectory(atPath path: String,
-                              completion: @escaping ((Result<[SFTPPathComponent], Error>) -> Void)) {
+                              completion: @escaping ((Result<[SFTPPathComponent], Error>) -> Void))
+    {
         let newPath = recursivelyExecute(
             { path in
-                return self.sftpChannel.realpath(path: path).map {
+                self.sftpChannel.realpath(path: path).map {
                     $0.components.first?.filename ?? ""
                 }
             },
             merge: { new, current in
-                return (new, new != current)
+                (new, new != current)
             },
             response: path
         )
         newPath.flatMap { path in
-            return self.sftpChannel.openDir(path: path)
+            self.sftpChannel.openDir(path: path)
         }
         .flatMap { (handle: SFTPMessage.Handle) in
             self.recursivelyExecute(
-                { (names: [SFTPPathComponent]) in
-                    return self.sftpChannel.readDir(handle.handle)
+                { (_: [SFTPPathComponent]) in
+                    self.sftpChannel.readDir(handle.handle)
                 },
                 merge: { (response: SFTPMessage.ReadDir.Response, current: [SFTPPathComponent]) in
                     switch response {
-                    case let .name(name):
+                    case .name(let name):
                         return (current + name.components, true)
                     case .status:
                         return (current, false)
@@ -71,7 +71,7 @@ public final class SFTPClient {
         )
         return sftpChannel.openFile(message)
             .map { handle in
-                return SFTPFile(
+                SFTPFile(
                     channel: self.sftpChannel,
                     path: filePath,
                     handle: handle.handle,
@@ -93,9 +93,9 @@ public final class SFTPClient {
             updateQueue: .global(qos: .utility)
         ) { result in
             switch result {
-            case let .failure(error):
+            case .failure(let error):
                 completion(.failure(error))
-            case let .success(file):
+            case .success(let file):
                 closure(file) {
                     file.close(completion: completion)
                 }
@@ -126,7 +126,7 @@ public final class SFTPClient {
 
     public func removeDirectory(atPath path: String,
                                 completion: @escaping ((Result<Void, Error>) -> Void)) {
-        return sftpChannel.rmdir(path: path)
+        sftpChannel.rmdir(path: path)
             .mapAsVoid()
             .whenComplete(on: updateQueue, completion)
     }

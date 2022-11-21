@@ -2,7 +2,7 @@ import NIO
 
 final class SFTPMessageSerializer: MessageToByteEncoder {
     typealias OutboundIn = SFTPMessage
-    
+
     func encode(data: SFTPMessage, out: inout ByteBuffer) throws {
         let lengthIndex = out.writerIndex
         out.moveWriterIndex(forwardBy: 4)
@@ -106,7 +106,6 @@ final class SFTPMessageSerializer: MessageToByteEncoder {
 }
 
 private extension SFTPMessage {
-
     var type: SFTPMessageType {
         switch self {
         case .initialize:

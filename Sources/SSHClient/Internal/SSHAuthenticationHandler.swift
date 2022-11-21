@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Gaetan Zanella on 29/10/2022.
 //
@@ -10,7 +10,6 @@ import NIO
 import NIOSSH
 
 struct BuiltInSSHAuthenticationValidator: NIOSSHClientUserAuthenticationDelegate {
-
     enum AuthenticationError: Error {
         case unavailableMethod
     }
@@ -18,7 +17,8 @@ struct BuiltInSSHAuthenticationValidator: NIOSSHClientUserAuthenticationDelegate
     let authentication: SSHAuthentication
 
     func nextAuthenticationType(availableMethods: NIOSSHAvailableUserAuthenticationMethods,
-                                nextChallengePromise: EventLoopPromise<NIOSSHUserAuthenticationOffer?>) {
+                                nextChallengePromise: EventLoopPromise<NIOSSHUserAuthenticationOffer?>)
+    {
         switch authentication.method.implementation {
         case .none:
             nextChallengePromise.succeed(
@@ -28,7 +28,7 @@ struct BuiltInSSHAuthenticationValidator: NIOSSHClientUserAuthenticationDelegate
                     offer: .none
                 )
             )
-        case let .password(password):
+        case .password(let password):
             guard availableMethods.contains(.password) else {
                 nextChallengePromise.fail(AuthenticationError.unavailableMethod)
                 return
@@ -44,14 +44,13 @@ struct BuiltInSSHAuthenticationValidator: NIOSSHClientUserAuthenticationDelegate
                     )
                 )
             )
-        case let .custom(delegate):
+        case .custom(let delegate):
             delegate.nextAuthenticationType(availableMethods: availableMethods, nextChallengePromise: nextChallengePromise)
         }
     }
 }
 
 struct BuiltInSSHClientServerAuthenticationValidator: NIOSSHClientServerAuthenticationDelegate {
-
     let validation: SSHAuthentication.HostKeyValidation
 
     func validateHostKey(hostKey: NIOSSHPublicKey,
@@ -59,14 +58,13 @@ struct BuiltInSSHClientServerAuthenticationValidator: NIOSSHClientServerAuthenti
         switch validation.implementation {
         case .acceptAll:
             validationCompletePromise.succeed(())
-        case let .custom(delegate):
+        case .custom(let delegate):
             delegate.validateHostKey(hostKey: hostKey, validationCompletePromise: validationCompletePromise)
         }
     }
 }
 
 class SSHAuthenticationHandler: ChannelInboundHandler {
-
     enum AuthenticationError: Error {
         case timeout
         case endedChannel
@@ -96,7 +94,7 @@ class SSHAuthenticationHandler: ChannelInboundHandler {
 
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         if event is UserAuthSuccessEvent {
-            self.promise.succeed(())
+            promise.succeed(())
         }
         context.fireUserInboundEventTriggered(event)
     }

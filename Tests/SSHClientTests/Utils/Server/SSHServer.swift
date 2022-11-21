@@ -1,16 +1,14 @@
 
-import Foundation
 import Crypto
 import Dispatch
+import Foundation
 import NIOCore
 import NIOPosix
 import NIOSSH
 import SSHClient
 
 class SSHServer {
-
     private(set) var receivedBuffer = Data()
-
 
     let username: String
     let password: String
@@ -34,8 +32,8 @@ class SSHServer {
          expectedPassword: String,
          host: String,
          port: UInt16) {
-        self.username = expectedUsername
-        self.password = expectedPassword
+        username = expectedUsername
+        password = expectedPassword
         self.host = host
         self.port = port
     }
@@ -72,7 +70,7 @@ class SSHServer {
                             )),
                             allocator: channel.allocator,
                             inboundChildChannelInitializer: self.sshChildChannelInitializer(_:channelType:)
-                        )
+                        ),
                     ]
                 )
             }
@@ -92,7 +90,7 @@ class SSHServer {
                                             channelType: SSHChannelType) -> EventLoopFuture<Void> {
         switch channelType {
         case .session:
-            self.child = channel
+            child = channel
             return channel.pipeline.addHandler(
                 ExampleExecHandler()
             )
@@ -134,7 +132,7 @@ class ExampleExecHandler: ChannelDuplexHandler {
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case let event as SSHChannelRequestEvent.ExecRequest:
-            let buffer = context.channel.allocator.buffer(string: self.response)
+            let buffer = context.channel.allocator.buffer(string: response)
             queue.asyncAfter(deadline: .now() + timeBeforeAnswer) {
                 context.write(
                     self.wrapOutboundOut(SSHChannelData(type: .channel, data: .byteBuffer(buffer)))
@@ -148,7 +146,6 @@ class ExampleExecHandler: ChannelDuplexHandler {
                         context.channel.triggerUserOutboundEvent(ChannelSuccessEvent(), promise: nil)
                     }
                 }
-
             }
         default:
             context.fireUserInboundEventTriggered(event)
@@ -156,7 +153,7 @@ class ExampleExecHandler: ChannelDuplexHandler {
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let data = self.unwrapInboundIn(data)
+        let data = unwrapInboundIn(data)
 
         guard case .byteBuffer(let bytes) = data.data else {
             fatalError("Unexpected read type")
@@ -167,15 +164,14 @@ class ExampleExecHandler: ChannelDuplexHandler {
             return
         }
 
-        context.fireChannelRead(self.wrapInboundOut(bytes))
+        context.fireChannelRead(wrapInboundOut(bytes))
     }
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let data = self.unwrapOutboundIn(data)
-        context.write(self.wrapOutboundOut(SSHChannelData(type: .channel, data: .byteBuffer(data))), promise: promise)
+        let data = unwrapOutboundIn(data)
+        context.write(wrapOutboundOut(SSHChannelData(type: .channel, data: .byteBuffer(data))), promise: promise)
     }
 }
-
 
 class HardcodedPasswordDelegate: NIOSSHServerUserAuthenticationDelegate {
     var supportedAuthenticationMethods: NIOSSHAvailableUserAuthenticationMethods {
@@ -191,8 +187,8 @@ class HardcodedPasswordDelegate: NIOSSHServerUserAuthenticationDelegate {
          expectedPassword: String,
          hasReceivedRequest: @escaping () -> Void,
          timeBeforeAuthentication: @escaping () -> TimeInterval) {
-        self.username = expectedUsername
-        self.password = expectedPassword
+        username = expectedUsername
+        password = expectedPassword
         self.hasReceivedRequest = hasReceivedRequest
         self.timeBeforeAuthentication = timeBeforeAuthentication
     }

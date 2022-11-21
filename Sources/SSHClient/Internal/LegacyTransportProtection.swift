@@ -1,15 +1,15 @@
 //
 //  LegacyTransportProtection.swift
-//  
+//
 //
 //  Created by Gaetan Zanella on 28/10/2022.
 //
 
-import Foundation
+import CCryptoBoringSSL
 import Crypto
+import Foundation
 import NIO
 import NIOSSH
-import CCryptoBoringSSL
 
 enum LegacyTransportProtectionError: Error {
     case invalidKeySize
@@ -26,7 +26,6 @@ enum LegacyTransportProtectionError: Error {
 }
 
 final class LegacyTransportProtection: NIOSSHTransportProtection {
-
     static let macName: String? = "hmac-sha2-256"
     static let cipherBlockSize = 16
     static let cipherName = "aes128-ctr"
@@ -50,10 +49,10 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
             throw LegacyTransportProtectionError.invalidKeySize
         }
 
-        self.keys = initialKeys
+        keys = initialKeys
 
-        self.encryptionContext = CCryptoBoringSSL_EVP_CIPHER_CTX_new()
-        self.decryptionContext = CCryptoBoringSSL_EVP_CIPHER_CTX_new()
+        encryptionContext = CCryptoBoringSSL_EVP_CIPHER_CTX_new()
+        decryptionContext = CCryptoBoringSSL_EVP_CIPHER_CTX_new()
 
         let outboundEncryptionKey = initialKeys.outboundEncryptionKey.withUnsafeBytes { buffer -> [UInt8] in
             let outboundEncryptionKey = Array(buffer.bindMemory(to: UInt8.self))
@@ -96,7 +95,7 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
             throw LegacyTransportProtectionError.invalidKeySize
         }
 
-        self.keys = newKeys
+        keys = newKeys
 
         let outboundEncryptionKey = newKeys.outboundEncryptionKey.withUnsafeBytes { buffer -> [UInt8] in
             let outboundEncryptionKey = Array(buffer.bindMemory(to: UInt8.self))
@@ -178,21 +177,22 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
                 return try [UInt8](
                     unsafeUninitializedCapacity: ciphertext.count,
                     initializingWith: { plaintext, count in
-                    let plaintextPointer = plaintext.baseAddress!
+                        let plaintextPointer = plaintext.baseAddress!
 
-                    while count < ciphertext.count {
-                        guard CCryptoBoringSSL_EVP_Cipher(
-                            decryptionContext,
-                            plaintextPointer + count,
-                            ciphertextPointer + count,
-                            Self.cipherBlockSize
-                        ) == 1 else {
-                            throw LegacyTransportProtectionError.cryptographicError
+                        while count < ciphertext.count {
+                            guard CCryptoBoringSSL_EVP_Cipher(
+                                decryptionContext,
+                                plaintextPointer + count,
+                                ciphertextPointer + count,
+                                Self.cipherBlockSize
+                            ) == 1 else {
+                                throw LegacyTransportProtectionError.cryptographicError
+                            }
+
+                            count += Self.cipherBlockSize
                         }
-
-                        count += Self.cipherBlockSize
                     }
-                })
+                )
             }
 
             // All good! A quick soundness check to verify that the length of the plaintext is ok.
@@ -326,12 +326,12 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
     }
 }
 
-extension ByteBuffer {
+private extension ByteBuffer {
     /// Prepends the given Data to this ByteBuffer.
     ///
     /// Will crash if there isn't space in the front of this buffer, so please ensure there is!
-    fileprivate mutating func prependBytes(_ bytes: [UInt8]) {
-        self.moveReaderIndex(to: self.readerIndex - bytes.count)
-        self.setContiguousBytes(bytes, at: self.readerIndex)
+    mutating func prependBytes(_ bytes: [UInt8]) {
+        moveReaderIndex(to: readerIndex - bytes.count)
+        setContiguousBytes(bytes, at: readerIndex)
     }
 }

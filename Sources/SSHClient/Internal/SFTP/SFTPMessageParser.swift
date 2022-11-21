@@ -2,7 +2,7 @@ import NIO
 
 struct SFTPMessageParser: ByteToMessageDecoder {
     typealias InboundOut = SFTPMessage
-    
+
     mutating func decode(context: ChannelHandlerContext,
                          buffer: inout ByteBuffer) throws -> DecodingState {
         let oldReaderIndex = buffer.readerIndex
@@ -28,9 +28,9 @@ struct SFTPMessageParser: ByteToMessageDecoder {
             guard let version = payload.readInteger(as: UInt32.self) else {
                 throw SFTPError.invalidPayload(type: type)
             }
-            
+
             var extensionData = [(String, String)]()
-            
+
             while payload.readableBytes > 0 {
                 guard
                     let key = payload.readSSHString(),
@@ -38,7 +38,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
                 else {
                     throw SFTPError.invalidPayload(type: type)
                 }
-                
+
                 extensionData.append((key, value))
             }
             message = .version(
@@ -106,7 +106,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
                 let data = payload.readSSHBuffer()
             else {
                 throw SFTPError.invalidPayload(type: type)
-            } 
+            }
             message = .write(
                 .init(
                     requestId: requestId,
@@ -278,7 +278,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
                 throw SFTPError.invalidPayload(type: type)
             }
             var components = [SFTPPathComponent]()
-            for _ in 0..<componentCount {
+            for _ in 0 ..< componentCount {
                 guard
                     let filename = payload.readSSHString(),
                     let longname = payload.readSSHString(),
@@ -334,7 +334,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
             else {
                 throw SFTPError.invalidPayload(type: type)
             }
-            
+
             message = .setstat(
                 .init(
                     requestId: requestId,
@@ -352,7 +352,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
             else {
                 throw SFTPError.invalidPayload(type: type)
             }
-            
+
             message = .fsetstat(
                 .init(
                     requestId: requestId,
@@ -369,7 +369,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
             else {
                 throw SFTPError.invalidPayload(type: type)
             }
-            
+
             message = .readlink(
                 .init(
                     requestId: requestId,
@@ -384,7 +384,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
             else {
                 throw SFTPError.invalidPayload(type: type)
             }
-            
+
             message = .symlink(
                 .init(
                     requestId: requestId,
@@ -413,7 +413,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
         case .extended, .extendedReply:
             throw SFTPError.invalidPayload(type: type)
         }
-        
+
         context.fireChannelRead(wrapInboundOut(message))
         return .continue
     }
