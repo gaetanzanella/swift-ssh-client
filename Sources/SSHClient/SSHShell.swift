@@ -65,17 +65,26 @@ public class SSHShell {
     }
 }
 
-extension SSHShell {
+final class SSHShellSession: SSHSession {
+
+    struct Configuration {
+        let updateQueue: DispatchQueue
+    }
+
+    let shell: SSHShell
+
+    init(shell: SSHShell) {
+        self.shell = shell
+    }
 
     static func launch(on channel: Channel,
-                       timeout: TimeInterval,
-                       updateQueue: DispatchQueue) -> EventLoopFuture<SSHShell> {
-        let shell = SSHShell(channel: channel, updateQueue: updateQueue)
-        return shell.channel.pipeline.addHandlers(
+                       promise: Promise<SSHShellSession>,
+                       configuration: Configuration) {
+        let shell = SSHShell(channel: channel, updateQueue: configuration.updateQueue)
+        let result = shell.channel.pipeline.addHandlers(
             [
                 StartShellHandler(
-                    eventLoop: channel.eventLoop,
-                    timeout: timeout
+                    eventLoop: channel.eventLoop
                 ),
                 ReadShellHandler(onData: { [weak shell] in
                     shell?.onRead($0)
@@ -85,6 +94,18 @@ extension SSHShell {
                 })
             ]
         )
-        .map { shell }
+        .flatMap {
+            shell
+                .channel
+                .pipeline
+                .handler(type: StartShellHandler.self)
+                .flatMap {
+                    $0.startPromise.futureResult
+                }
+        }
+        .map {
+            SSHShellSession(shell: shell)
+        }
+        promise.completeWith(result)
     }
 }

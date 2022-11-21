@@ -27,6 +27,7 @@ public class SSHConnection {
         stateMachine.channel
     }
 
+    private let eventLoop = MultiThreadedEventLoopGroup.ssh.next()
     private let updateQueue: DispatchQueue
 
     // MARK: - Life Cycle
@@ -47,8 +48,8 @@ public class SSHConnection {
 
     public func start(withTimeout timeout: TimeInterval,
                       completion: @escaping (Result<Void, Error>) -> Void) {
-        schedule { [weak self] in
-            self?.updateState(
+        eventLoop.execute {
+            self.updateState(
                 event: .requestConnection(
                     timeout,
                     { error in completion(error.flatMap { .failure($0) } ?? .success(())) }
@@ -58,38 +59,28 @@ public class SSHConnection {
     }
 
     public func end(completion: @escaping () -> Void) {
-        schedule { [weak self] in
-            self?.updateState(event: .requestDisconnection(completion))
+        eventLoop.execute {
+            self.updateState(event: .requestDisconnection(completion))
         }
     }
 
     public func requestShell(withTimeout timeout: TimeInterval,
                              updateQueue: DispatchQueue = .main,
                              completion: @escaping (Result<SSHShell, Error>) -> Void) {
-        schedule { [weak self] in
-            self?.triggerShellStart(withTimeout: timeout, updateQueue: updateQueue, completion: completion)
-        }
+        start(SSHShellSession.self, timeout: timeout, configuration: .init(updateQueue: updateQueue))
+            .map { $0.shell }
+            .whenComplete(on: updateQueue, completion)
     }
 
     public func requestSFTPClient(withTimeout timeout: TimeInterval,
                                   updateQueue: DispatchQueue = .main,
                                   completion: @escaping (Result<SFTPClient, Error>) -> Void) {
-        schedule { [weak self] in
-            self?.triggerSFTP(
-                withTimeout: timeout,
-                updateQueue: updateQueue,
-                completion: completion
-            )
-        }
+        start(SFTPSession.self, timeout: timeout, configuration: .init(updateQueue: updateQueue))
+            .map { $0.client }
+            .whenComplete(on: updateQueue, completion)
     }
 
     // MARK: - Private
-
-    private func schedule(_ task: @escaping () -> Void) {
-        MultiThreadedEventLoopGroup.ssh.next().execute {
-            task()
-        }
-    }
 
     private func updateState(event: SSHConnectionEvent) {
         let old = stateMachine.state
@@ -118,114 +109,53 @@ public class SSHConnection {
         }
     }
 
-    private func triggerShellStart(withTimeout timeout: TimeInterval,
-                                   updateQueue: DispatchQueue,
-                                   completion: @escaping (Result<SSHShell, Error>) -> Void) {
-        guard let root = channel else {
-            updateQueue.async {
-                completion(.failure(ConnectionError.requireActiveConnection))
-            }
-            return
-        }
-        let creationPromise = root.eventLoop.makePromise(of: Channel.self)
-        let channel = root
-            .pipeline
-            .handler(type: NIOSSHHandler.self)
-            .flatMap { handler in
-                handler.createChannel(
-                    creationPromise,
-                    channelType: .session,
-                    nil
-                )
-                return creationPromise.futureResult
-            }
-            .flatMap { (channel: Channel) -> EventLoopFuture<SSHShell> in
-                return SSHShell.launch(on: channel, timeout: timeout, updateQueue: updateQueue)
-            }
-            .flatMap { shell in
-                shell
-                    .channel
-                    .pipeline
-                    .handler(type: StartShellHandler.self)
-                    .flatMap {
-                        $0.startPromise.futureResult
-                    }
-                    .map {
-                        shell
-                    }
-            }
-        channel.whenComplete { [weak self] result in
-            let r = result
-            self?.updateQueue.async {
-                completion(r)
-                return
-            }
-        }
-    }
-
-    private func triggerSFTP(withTimeout timeout: TimeInterval,
-                             updateQueue: DispatchQueue,
-                             completion: @escaping (Result<SFTPClient, Error>) -> Void) {
-        guard let channel = channel else {
-            updateQueue.async {
-                completion(.failure(ConnectionError.requireActiveConnection))
-            }
-            return
-        }
-        let createChannel = channel.eventLoop.makePromise(of: Channel.self)
-        let createClient = channel.eventLoop.makePromise(of: SFTPClient.self)
-        let timeoutCheck = channel.eventLoop.makePromise(of: Void.self)
-        channel.eventLoop.scheduleTask(in: .seconds(Int64(timeout))) {
-            // TODO Close potential created channel
-            timeoutCheck.fail(SFTPError.missingResponse)
-            createChannel.fail(SFTPError.missingResponse)
-            createClient.fail(SFTPError.missingResponse)
-        }
-        channel
-            .pipeline
-            .handler(type: NIOSSHHandler.self)
-            .flatMap { handler in
-                handler.createChannel(createChannel, nil)
-                return createChannel
-                    .futureResult
-                    .flatMap { channel in
-                        let openSubsystem = channel.eventLoop.makePromise(of: Void.self)
-                        channel.triggerUserOutboundEvent(
-                            SSHChannelRequestEvent.SubsystemRequest(
-                                subsystem: "sftp",
-                                wantReply: true
-                            ),
-                            promise: openSubsystem
-                        )
-                        return openSubsystem.futureResult.map { channel }
-                    }
-                    .flatMap { (channel: Channel) in
-                        return channel.pipeline.addHandlers(
-                            [
-                                SSHChannelDataUnwrapper(),
-                                SSHOutboundChannelDataWrapper()
-                            ]
-                        )
-                        .map { channel }
-                    }
-                    .flatMap { channel in
-                        IOSFTPChannel.launch(on: channel)
-                    }
-                    .map { sftpChannel in
-                        SFTPClient(
-                            sftpChannel: sftpChannel,
-                            updateQueue: updateQueue
-                        )
-                    }
-                    .map { (client: SFTPClient) in
-                        timeoutCheck.succeed(())
-                        return client
-                    }
-            }
-            .whenComplete { [weak self] result in
-                self?.updateQueue.async {
-                    completion(result)
+    private func start<Session: SSHSession>(_ session: Session.Type,
+                                            timeout: TimeInterval,
+                                            configuration: Session.Configuration) -> Future<Session> {
+        eventLoop
+            .submit { () throws -> Channel in
+                if let channel = self.channel {
+                    return channel
+                } else {
+                    throw ConnectionError.requireActiveConnection
                 }
+            }
+            .flatMap { channel in
+                let createChannel = channel.eventLoop.makePromise(of: Channel.self)
+                channel.eventLoop.scheduleTask(in: .seconds(Int64(timeout))) {
+                    createChannel.fail(ConnectionError.timeout)
+                }
+                return channel
+                    .pipeline
+                    .handler(type: NIOSSHHandler.self)
+                    .flatMap { handler in
+                        handler.createChannel(createChannel, channelType: .session, nil)
+                        return createChannel
+                            .futureResult
+                            .flatMap { channel in
+                                let createSession = channel.eventLoop.makePromise(of: Session.self)
+                                channel.eventLoop.scheduleTask(in: .seconds(Int64(timeout))) {
+                                    createSession.fail(ConnectionError.timeout)
+                                }
+                                Session.launch(
+                                    on: channel,
+                                    promise: createSession,
+                                    configuration: configuration
+                                )
+                                return createSession.futureResult
+                            }
+                            .map { (client: Session) in
+                                return client
+                            }
+                            .flatMapError { error in
+                                // we close the created channel and spread the error
+                                return channel
+                                    .close()
+                                    .flatMapThrowing { _ -> Session in
+                                        throw error
+                                    }
+                            }
+                    }
             }
     }
 
@@ -287,7 +217,7 @@ public class SSHConnection {
         channel.flatMap {
             $0.closeFuture
         }
-        .whenComplete { [weak self] result in
+        .whenComplete { [weak self] _ in
             self?.updateState(event: .disconnected)
         }
     }

@@ -12,21 +12,13 @@ class StartShellHandler: ChannelInboundHandler {
     typealias InboundIn = SSHChannelData
 
     let startPromise: EventLoopPromise<Void>
-    let timeout: TimeInterval
-    private let task: Scheduled<Void>
 
-    init(eventLoop: EventLoop,
-         timeout: TimeInterval) {
+    init(eventLoop: EventLoop) {
         let promise = eventLoop.makePromise(of: Void.self)
         self.startPromise = promise
-        self.timeout = timeout
-        task = eventLoop.scheduleTask(in: .seconds(Int64(timeout))) {
-            promise.fail(SSHConnection.ConnectionError.timeout)
-        }
     }
 
     deinit {
-        task.cancel()
         startPromise.fail(StartShellError.endedChannel)
     }
 
