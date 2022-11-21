@@ -158,8 +158,8 @@ struct SSHConnectionStateMachine {
                 assertionFailure("Invalid transition")
                 return .none
             case .disconnected:
-                assertionFailure("Invalid transition")
-                return .none
+                internalState = .failed(SSHConnection.ConnectionError.unknown)
+                return .callErrorCompletion(sSHCompletionList, SSHConnection.ConnectionError.unknown)
             }
         case .disconnecting(let channel, let sSHCompletionList, let error):
             switch event {

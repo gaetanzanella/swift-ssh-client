@@ -4,15 +4,15 @@
 import PackageDescription
 
 let package = Package(
-    name: "swift-ssh",
+    name: "swift-ssh-client",
     platforms: [
         .iOS(.v13),
         .macOS(.v11)
     ],
     products: [
         .library(
-            name: "SwiftSSH",
-            targets: ["SwiftSSH"]),
+            name: "SSHClient",
+            targets: ["SSHClient"]),
     ],
     dependencies: [
         // TODO: Use version once available…
@@ -21,13 +21,13 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "SwiftSSH",
+            name: "SSHClient",
             dependencies: [
                 .product(name: "NIOSSH", package: "swift-nio-ssh"),
                 .product(name: "_CryptoExtras", package: "swift-crypto"),
             ]),
         .testTarget(
-            name: "SwiftSSHTests",
-            dependencies: ["SwiftSSH"]),
+            name: "SSHClientTests",
+            dependencies: ["SSHClient"]),
     ]
 )

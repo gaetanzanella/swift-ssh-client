@@ -1,6 +1,6 @@
 
 import Foundation
-@testable import SwiftSSH
+@testable import SSHClient
 import XCTest
 
 class SFTPRequestIDAllocatorTests: XCTestCase {

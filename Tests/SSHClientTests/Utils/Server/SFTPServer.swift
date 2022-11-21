@@ -1,6 +1,6 @@
 
 import Foundation
-import SwiftSSH
+import SSHClient
 
 class SFTPServer {
 

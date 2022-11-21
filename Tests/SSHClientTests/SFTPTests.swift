@@ -1,6 +1,6 @@
 
 import Foundation
-import SwiftSSH
+import SSHClient
 import XCTest
 
 class SFTPTests: XCTestCase {

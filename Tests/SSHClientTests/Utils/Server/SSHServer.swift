@@ -5,7 +5,7 @@ import Dispatch
 import NIOCore
 import NIOPosix
 import NIOSSH
-import SwiftSSH
+import SSHClient
 
 class SSHServer {
 
