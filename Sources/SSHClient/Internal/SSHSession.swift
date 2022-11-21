@@ -3,10 +3,12 @@ import Foundation
 import NIOCore
 import NIOSSH
 
-protocol SSHSession {
-    associatedtype Configuration
+struct SSHSessionContext {
+    let channel: Channel
+    let sshHandler: NIOSSHHandler
+    let promise: Promise<Void>
+}
 
-    static func launch(on channel: Channel,
-                       promise: Promise<Self>,
-                       configuration: Configuration)
+protocol SSHSession {
+    func start(in context: SSHSessionContext)
 }

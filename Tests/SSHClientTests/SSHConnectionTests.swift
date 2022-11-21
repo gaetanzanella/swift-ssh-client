@@ -71,7 +71,8 @@ class SSHConnectionTests: XCTestCase {
             /* Seems like the only way to detect failure is to use a timeout :/  */
             XCTAssertEqual(connection.state, .failed(.timeout))
             XCTAssertEqual(connection.updates, [.failed(.timeout)])
-            XCTAssertTrue(self.server.hasActiveChild)
+            self.wait(timeout: 0.2)
+            XCTAssertFalse(self.server.hasActiveChild)
             expect.fulfill()
         }
         wait(for: [expect], timeout: 3)

@@ -5,6 +5,7 @@ import NIOCore
 
 protocol SFTPChannel {
     func close() -> Future<Void>
+    func start(in context: SSHSessionContext)
 
     func openFile(_ file: SFTPMessage.OpenFile.Payload) -> Future<SFTPMessage.Handle>
     func closeFile(_ file: SFTPFileHandle) -> Future<SFTPMessage.Status>
@@ -27,9 +28,9 @@ class IOSFTPChannel: SFTPChannel {
 
     // MARK: - Life Cycle
 
-    fileprivate init(idAllocator: SFTPRequestIDAllocator,
-                     eventLoop: EventLoop,
-                     stateMachine: SFTPClientStateMachine) {
+    init(idAllocator: SFTPRequestIDAllocator,
+         eventLoop: EventLoop,
+         stateMachine: SFTPClientStateMachine) {
         self.stateMachine = stateMachine
         self.eventLoop = eventLoop
         self.idAllocator = idAllocator
@@ -255,35 +256,19 @@ class IOSFTPChannel: SFTPChannel {
 
 import NIOSSH
 
-final class SFTPSession: SSHSession {
-    struct Configuration {
-        let updateQueue: DispatchQueue
-    }
-
-    let client: SFTPClient
-
-    init(client: SFTPClient) {
-        self.client = client
-    }
-
-    static func launch(on channel: Channel,
-                       promise: Promise<SFTPSession>,
-                       configuration: Configuration) {
+extension IOSFTPChannel {
+    func start(in context: SSHSessionContext) {
+        let channel = context.channel
         let deserializeHandler = ByteToMessageHandler(SFTPMessageParser())
         let serializeHandler = MessageToByteHandler(SFTPMessageSerializer())
-        let sftpChannel = IOSFTPChannel(
-            idAllocator: MonotonicRequestIDAllocator(start: 0),
-            eventLoop: channel.eventLoop,
-            stateMachine: SFTPClientStateMachine(channel: channel)
-        )
-        let sftpInboundHandler = SFTPClientInboundHandler { [weak sftpChannel] response in
-            sftpChannel?.trigger(.inboundMessage(response))
+        let sftpInboundHandler = SFTPClientInboundHandler { [weak self] response in
+            self?.trigger(.inboundMessage(response))
         }
         let startPromise = channel.eventLoop.makePromise(
             of: Void.self
         )
-        channel.closeFuture.whenComplete { [weak sftpChannel] _ in
-            sftpChannel?.trigger(.disconnected)
+        channel.closeFuture.whenComplete { [weak self] _ in
+            self?.trigger(.disconnected)
         }
         let openSubsystem = channel.eventLoop.makePromise(of: Void.self)
         channel.triggerUserOutboundEvent(
@@ -312,16 +297,13 @@ final class SFTPSession: SSHSession {
                     sftpInboundHandler,
                     NIOCloseOnErrorHandler()
                 )
+                .map { channel }
             }
-            .flatMap {
-                sftpChannel.trigger(.start(startPromise))
-                return startPromise.futureResult.map { sftpChannel }
+            .flatMap { [weak self] channel in
+                self?.trigger(.start(channel, startPromise))
+                return startPromise.futureResult
             }
-            .map {
-                SFTPSession(
-                    client: SFTPClient(sftpChannel: $0, updateQueue: configuration.updateQueue)
-                )
-            }
-        promise.completeWith(result)
+            .mapAsVoid()
+        context.promise.completeWith(result)
     }
 }

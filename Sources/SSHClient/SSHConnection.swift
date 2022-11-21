@@ -66,16 +66,25 @@ public class SSHConnection {
     public func requestShell(withTimeout timeout: TimeInterval,
                              updateQueue: DispatchQueue = .main,
                              completion: @escaping (Result<SSHShell, Error>) -> Void) {
-        start(SSHShellSession.self, timeout: timeout, configuration: .init(updateQueue: updateQueue))
-            .map { $0.shell }
+        let shell = SSHShell(updateQueue: updateQueue)
+        start(shell, timeout: timeout)
+            .map { shell }
             .whenComplete(on: updateQueue, completion)
     }
 
     public func requestSFTPClient(withTimeout timeout: TimeInterval,
                                   updateQueue: DispatchQueue = .main,
                                   completion: @escaping (Result<SFTPClient, Error>) -> Void) {
-        start(SFTPSession.self, timeout: timeout, configuration: .init(updateQueue: updateQueue))
-            .map { $0.client }
+        let sftpClient = SFTPClient(
+            sftpChannel: IOSFTPChannel(
+                idAllocator: MonotonicRequestIDAllocator(start: 0),
+                eventLoop: eventLoop,
+                stateMachine: SFTPClientStateMachine()
+            ),
+            updateQueue: updateQueue
+        )
+        start(sftpClient, timeout: timeout)
+            .map { sftpClient }
             .whenComplete(on: updateQueue, completion)
     }
 
@@ -108,10 +117,8 @@ public class SSHConnection {
         }
     }
 
-    private func start<Session: SSHSession>(_: Session.Type,
-                                            timeout: TimeInterval,
-                                            configuration: Session.Configuration) -> Future<Session>
-    {
+    private func start(_ session: SSHSession,
+                       timeout: TimeInterval) -> Future<Void> {
         eventLoop
             .submit { () throws -> Channel in
                 if let channel = self.channel {
@@ -133,25 +140,25 @@ public class SSHConnection {
                         return createChannel
                             .futureResult
                             .flatMap { channel in
-                                let createSession = channel.eventLoop.makePromise(of: Session.self)
+                                let createSession = channel.eventLoop.makePromise(of: Void.self)
+                                // TODO: We should only consider the remaining time, but that's ok
                                 channel.eventLoop.scheduleTask(in: .seconds(Int64(timeout))) {
                                     createSession.fail(ConnectionError.timeout)
                                 }
-                                Session.launch(
-                                    on: channel,
-                                    promise: createSession,
-                                    configuration: configuration
+                                session.start(
+                                    in: SSHSessionContext(
+                                        channel: channel,
+                                        sshHandler: handler,
+                                        promise: createSession
+                                    )
                                 )
                                 return createSession.futureResult
-                            }
-                            .map { (client: Session) in
-                                client
                             }
                             .flatMapError { error in
                                 // we close the created channel and spread the error
                                 channel
                                     .close()
-                                    .flatMapThrowing { _ -> Session in
+                                    .flatMapThrowing {
                                         throw error
                                     }
                             }

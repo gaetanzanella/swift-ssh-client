@@ -14,6 +14,12 @@ public final class SFTPClient {
         self.updateQueue = updateQueue
     }
 
+    // MARK: - Internal
+
+    func start(in context: SSHSessionContext) {
+        sftpChannel.start(in: context)
+    }
+
     // MARK: - Public
 
     public func listDirectory(atPath path: String,
@@ -167,3 +173,5 @@ public final class SFTPClient {
         }
     }
 }
+
+extension SFTPClient: SSHSession {}
