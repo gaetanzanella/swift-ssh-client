@@ -66,7 +66,10 @@ public class SSHConnection {
     public func requestShell(withTimeout timeout: TimeInterval,
                              updateQueue: DispatchQueue = .main,
                              completion: @escaping (Result<SSHShell, Error>) -> Void) {
-        let shell = SSHShell(updateQueue: updateQueue)
+        let shell = SSHShell(
+            ioShell: IOSSHShell(eventLoop: eventLoop),
+            updateQueue: updateQueue
+        )
         start(shell, timeout: timeout)
             .map { shell }
             .whenComplete(on: updateQueue, completion)
@@ -188,11 +191,7 @@ public class SSHConnection {
                     eventLoop: group.next(),
                     timeout: .seconds(Int64(timeout))
                 ),
-                ErrorHandler { [weak self] error in
-                    self?.updateState(
-                        event: .error(error)
-                    )
-                },
+                NIOCloseOnErrorHandler(),
             ])
         }
         .connectTimeout(.seconds(Int64(timeout)))
