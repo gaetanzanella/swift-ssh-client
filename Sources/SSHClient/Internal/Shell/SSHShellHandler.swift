@@ -12,12 +12,15 @@ class StartShellHandler: ChannelInboundHandler {
 
     let handler: (Result<Void, Error>) -> Void
 
+    // To avoid multiple starts
+    private var isStarted = false
+
     init(handler: @escaping (Result<Void, Error>) -> Void) {
         self.handler = handler
     }
 
     deinit {
-        handler(.failure(StartShellError.endedChannel))
+        triggerStart(.failure(StartShellError.endedChannel))
     }
 
     func handlerAdded(context: ChannelHandlerContext) {
@@ -33,19 +36,25 @@ class StartShellHandler: ChannelInboundHandler {
                 )
                 return promise.futureResult
             }
-            .whenFailure { _ in
-                self.handler(.failure(StartShellError.endedChannel))
+            .whenFailure { [weak self] error in
+                self?.triggerStart(.failure(error))
             }
     }
 
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case is ChannelSuccessEvent:
-            handler(.success(()))
+            triggerStart(.success(()))
         default:
             break
         }
         context.fireUserInboundEventTriggered(event)
+    }
+
+    private func triggerStart(_ result: Result<Void, Error>) {
+        guard !isStarted else { return }
+        isStarted = true
+        handler(result)
     }
 }
 

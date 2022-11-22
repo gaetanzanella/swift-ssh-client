@@ -1,9 +1,3 @@
-//
-//  File.swift
-//
-//
-//  Created by Gaetan Zanella on 29/10/2022.
-//
 
 import Foundation
 import NIO

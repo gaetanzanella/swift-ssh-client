@@ -1,9 +1,3 @@
-//
-//  LegacyTransportProtection.swift
-//
-//
-//  Created by Gaetan Zanella on 28/10/2022.
-//
 
 import CCryptoBoringSSL
 import Crypto

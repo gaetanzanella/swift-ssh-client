@@ -6,7 +6,6 @@ import XCTest
 class SFTPTests: XCTestCase {
     var sftpServer: SFTPServer!
     var connection: SSHConnection!
-    var client: SFTPClient!
 
     override func setUp() {
         sftpServer = SFTPServer(configuration: .docker)

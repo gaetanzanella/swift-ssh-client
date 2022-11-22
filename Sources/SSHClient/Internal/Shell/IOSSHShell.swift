@@ -6,6 +6,10 @@ class IOSSHShell {
     private var stateMachine: SSHShellStateMachine
     private let eventLoop: EventLoop
 
+    var state: SSHShell.State {
+        stateMachine.state
+    }
+
     var stateUpdateHandler: ((SSHShell.State) -> Void)?
     var readHandler: ((Data) -> Void)?
 

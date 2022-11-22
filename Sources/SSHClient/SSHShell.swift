@@ -13,6 +13,10 @@ public class SSHShell: SSHSession {
     private let ioShell: IOSSHShell
     private let updateQueue: DispatchQueue
 
+    public var state: State {
+        ioShell.state
+    }
+
     // MARK: - Life Cycle
 
     init(ioShell: IOSSHShell,
@@ -28,6 +32,7 @@ public class SSHShell: SSHSession {
 
     func start(in context: SSHSessionContext) {
         ioShell.start(in: context)
+        setupIOShell()
     }
 
     // MARK: - Public
