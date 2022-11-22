@@ -29,9 +29,8 @@ class IOSFTPChannel: SFTPChannel {
     // MARK: - Life Cycle
 
     init(idAllocator: SFTPRequestIDAllocator,
-         eventLoop: EventLoop,
-         stateMachine: SFTPClientStateMachine) {
-        self.stateMachine = stateMachine
+         eventLoop: EventLoop) {
+        stateMachine = SFTPClientStateMachine()
         self.eventLoop = eventLoop
         self.idAllocator = idAllocator
     }

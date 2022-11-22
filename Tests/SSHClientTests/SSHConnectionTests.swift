@@ -110,7 +110,7 @@ class SSHConnectionTests: XCTestCase {
         wait(for: [connectionExp], timeout: 3)
         XCTAssertTrue(server.hasActiveChild)
         let disconnectionExp = XCTestExpectation()
-        connection.ssh.end {
+        connection.ssh.cancel {
             XCTAssertEqual(connection.state, .idle)
             XCTAssertEqual(connection.updates, [.ready, .idle])
             self.wait(timeout: 0.1)
@@ -139,7 +139,7 @@ class SSHConnectionTests: XCTestCase {
         }
         wait(for: [connect1], timeout: 1.0)
         let disconnectionExp = XCTestExpectation()
-        connection.ssh.end {
+        connection.ssh.cancel {
             XCTAssertEqual(connection.state, .idle)
             XCTAssertEqual(connection.updates, [])
             disconnectionExp.fulfill()
@@ -178,7 +178,7 @@ class SSHConnectionTests: XCTestCase {
         connection.ssh.start(withTimeout: 1) { _ in
             expect.fulfill()
             XCTAssertTrue(self.server.hasActiveChild)
-            connection.ssh.end {
+            connection.ssh.cancel {
                 self.wait(timeout: 0.1)
                 XCTAssertFalse(self.server.hasActiveChild)
                 expect.fulfill()

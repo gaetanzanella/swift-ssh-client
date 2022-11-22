@@ -2,6 +2,11 @@ import Foundation
 import NIO
 import NIOSSH
 
+public enum SSHShellError: Error {
+    case requireConnection
+    case unknown
+}
+
 public class SSHShell: SSHSession {
     public enum State: Equatable {
         case idle
@@ -23,6 +28,7 @@ public class SSHShell: SSHSession {
          updateQueue: DispatchQueue) {
         self.ioShell = ioShell
         self.updateQueue = updateQueue
+        setupIOShell()
     }
 
     public var readHandler: ((Data) -> Void)?
@@ -32,7 +38,6 @@ public class SSHShell: SSHSession {
 
     func start(in context: SSHSessionContext) {
         ioShell.start(in: context)
-        setupIOShell()
     }
 
     // MARK: - Public

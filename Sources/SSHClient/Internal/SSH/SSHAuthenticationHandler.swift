@@ -11,8 +11,7 @@ struct BuiltInSSHAuthenticationValidator: NIOSSHClientUserAuthenticationDelegate
     let authentication: SSHAuthentication
 
     func nextAuthenticationType(availableMethods: NIOSSHAvailableUserAuthenticationMethods,
-                                nextChallengePromise: EventLoopPromise<NIOSSHUserAuthenticationOffer?>)
-    {
+                                nextChallengePromise: EventLoopPromise<NIOSSHUserAuthenticationOffer?>) {
         switch authentication.method.implementation {
         case .none:
             nextChallengePromise.succeed(

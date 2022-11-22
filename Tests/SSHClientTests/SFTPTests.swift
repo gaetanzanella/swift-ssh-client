@@ -20,7 +20,7 @@ class SFTPTests: XCTestCase {
     }
 
     override func tearDown() {
-        connection.end {}
+        connection.cancel {}
         try! sftpServer.removeItem(
             atPath: sftpServer.preferredWorkingDirectoryPath()
         )
@@ -484,7 +484,7 @@ class SFTPTests: XCTestCase {
                 inner.fulfill()
                 completion()
             }
-            self.connection.end {}
+            self.connection.cancel {}
         } completion: { result in
             XCTAssertTrue(result.isFailure)
             exp.fulfill()

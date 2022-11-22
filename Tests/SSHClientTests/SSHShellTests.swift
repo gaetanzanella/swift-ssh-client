@@ -8,7 +8,7 @@ class SSHShellTests: XCTestCase {
     var connection: SSHConnection!
 
     override func setUp() {
-        sftpServer = SFTPServer(configuration: .docker)
+        sftpServer = SFTPServer(configuration: .local)
         connection = SSHConnection(
             host: sftpServer.host,
             port: sftpServer.port,
@@ -17,7 +17,7 @@ class SSHShellTests: XCTestCase {
     }
 
     override func tearDown() {
-        connection.end {}
+        connection.cancel {}
     }
 
     // MARK: - Shell
@@ -59,7 +59,7 @@ class SSHShellTests: XCTestCase {
         let shell = try launchShell()
         XCTAssertEqual(shell.states, [.ready])
         let exp = XCTestExpectation()
-        connection.end {
+        connection.cancel {
             exp.fulfill()
         }
         wait(for: [exp], timeout: 0.2)

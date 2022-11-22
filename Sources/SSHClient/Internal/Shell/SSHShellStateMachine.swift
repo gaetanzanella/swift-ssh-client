@@ -18,11 +18,6 @@ enum SSHShellAction {
     case none
 }
 
-public enum SSHShellError: Error {
-    case requireConnection
-    case unknown
-}
-
 struct SSHShellStateMachine {
     enum InternalState {
         case idle
