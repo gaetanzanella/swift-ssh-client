@@ -5,7 +5,7 @@ enum SSHShellEvent {
     case requestStart(Channel, Promise<Void>)
     case requestWrite(Data, Promise<Void>)
     case requestClosing(Promise<Void>)
-    case started(Result<Void, Error>)
+    case started
     case read(Data)
     case closed
 }
@@ -15,6 +15,7 @@ enum SSHShellAction {
     case close(Channel)
     case start(Channel)
     case dataAvailable(Data)
+    case callPromise(Promise<Void>, Result<Void, Error>)
     case none
 }
 
@@ -61,48 +62,35 @@ struct SSHShellStateMachine {
                 internalState = .starting(channel, promise)
                 return .start(channel)
             case .requestWrite(_, let promise):
-                promise.fail(SSHShellError.requireConnection)
-                return .none
+                return .callPromise(promise, .failure(SSHShellError.requireConnection))
             case .requestClosing(let promise):
-                promise.fail(SSHShellError.requireConnection)
-                return .none
+                return .callPromise(promise, .failure(SSHShellError.requireConnection))
             case .started, .read, .closed:
                 assertionFailure("Invalida transition")
                 return .none
             }
         case .starting(let channel, let promise):
             switch event {
-            case .started(let result):
-                switch result {
-                case .failure(let error):
-                    promise.fail(error)
-                    return .close(channel)
-                case .success:
-                    promise.succeed(())
-                    internalState = .ready(channel)
-                    return .none
-                }
+            case .started:
+                internalState = .ready(channel)
+                return .callPromise(promise, .success(()))
             case .requestStart(_, let promise):
-                promise.fail(SSHShellError.requireConnection)
-                return .none
+                return .callPromise(promise, .failure(SSHShellError.requireConnection))
             case .requestWrite(_, let promise):
-                promise.fail(SSHShellError.requireConnection)
-                return .none
+                return .callPromise(promise, .failure(SSHShellError.requireConnection))
             case .requestClosing(let promise):
                 internalState = .closing(promise)
                 return .close(channel)
             case .closed:
-                promise.fail(SSHShellError.requireConnection)
                 internalState = .failed(SSHShellError.requireConnection)
-                return .none
+                return .callPromise(promise, .failure(SSHShellError.requireConnection))
             case .read:
                 return .none
             }
         case .ready(let channel):
             switch event {
             case .requestStart(_, let promise):
-                promise.succeed(())
-                return .none
+                return .callPromise(promise, .success(()))
             case .requestWrite(let data, let promise):
                 return .write(data, channel, promise)
             case .requestClosing(let promise):
@@ -120,11 +108,9 @@ struct SSHShellStateMachine {
         case .closing(let closingPromise):
             switch event {
             case .requestStart(_, let promise):
-                promise.fail(SSHShellError.requireConnection)
-                return .none
+                return .callPromise(promise, .failure(SSHShellError.requireConnection))
             case .requestWrite(_, let promise):
-                promise.fail(SSHShellError.requireConnection)
-                return .none
+                return .callPromise(promise, .failure(SSHShellError.requireConnection))
             case .requestClosing(let promise):
                 promise.completeWith(closingPromise.futureResult)
                 return .none
@@ -135,21 +121,17 @@ struct SSHShellStateMachine {
                 return .none
             case .closed:
                 internalState = .closed
-                closingPromise.succeed(())
-                return .none
+                return .callPromise(closingPromise, .success(()))
             }
         case .failed(let error):
             switch event {
             case .requestStart(_, let promise):
-                promise.fail(error)
-                return .none
+                return .callPromise(promise, .failure(error))
             case .requestWrite(_, let promise):
-                promise.fail(error)
-                return .none
+                return .callPromise(promise, .failure(error))
             case .requestClosing(let promise):
                 // already closed
-                promise.succeed(())
-                return .none
+                return .callPromise(promise, .success(()))
             case .started:
                 assertionFailure("Invalid transition")
                 return .none
@@ -163,15 +145,12 @@ struct SSHShellStateMachine {
         case .closed:
             switch event {
             case .requestStart(_, let promise):
-                promise.fail(SSHShellError.requireConnection)
-                return .none
+                return .callPromise(promise, .failure(SSHShellError.requireConnection))
             case .requestWrite(_, let promise):
-                promise.fail(SSHShellError.requireConnection)
-                return .none
+                return .callPromise(promise, .failure(SSHShellError.requireConnection))
             case .requestClosing(let promise):
                 // already closed
-                promise.succeed(())
-                return .none
+                return .callPromise(promise, .success(()))
             case .started:
                 assertionFailure("Invalid transition")
                 return .none

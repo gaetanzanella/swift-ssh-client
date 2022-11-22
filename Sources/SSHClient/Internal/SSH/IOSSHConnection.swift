@@ -88,12 +88,7 @@ class IOSSHConnection {
         case .requestSession(let channel, let session, let timeout, let promise):
             startSession(channel: channel, session: session, timeout: timeout, promise: promise)
         case .callPromise(let promise, let result):
-            switch result {
-            case .success:
-                promise.succeed(())
-            case .failure(let error):
-                promise.fail(error)
-            }
+            promise.end(result)
         case .none:
             break
         }

@@ -2,7 +2,7 @@ import Foundation
 import NIO
 import NIOCore
 
-public final class SFTPClient {
+public final class SFTPClient: SSHSession {
     private let updateQueue: DispatchQueue
     private var sftpChannel: SFTPChannel
 
@@ -14,7 +14,7 @@ public final class SFTPClient {
         self.updateQueue = updateQueue
     }
 
-    // MARK: - Internal
+    // MARK: - SSHSession
 
     func start(in context: SSHSessionContext) {
         sftpChannel.start(in: context)
@@ -173,5 +173,3 @@ public final class SFTPClient {
         }
     }
 }
-
-extension SFTPClient: SSHSession {}

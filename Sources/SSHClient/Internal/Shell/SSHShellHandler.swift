@@ -10,21 +10,19 @@ class StartShellHandler: ChannelInboundHandler {
 
     typealias InboundIn = SSHChannelData
 
-    let handler: (Result<Void, Error>) -> Void
+    let handler: () -> Void
 
     // To avoid multiple starts
     private var isStarted = false
 
-    init(handler: @escaping (Result<Void, Error>) -> Void) {
+    init(handler: @escaping () -> Void) {
         self.handler = handler
     }
 
-    deinit {
-        triggerStart(.failure(StartShellError.endedChannel))
-    }
+    deinit {}
 
     func handlerAdded(context: ChannelHandlerContext) {
-        context
+        _ = context
             .channel
             .setOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             .flatMap {
@@ -36,25 +34,28 @@ class StartShellHandler: ChannelInboundHandler {
                 )
                 return promise.futureResult
             }
-            .whenFailure { [weak self] error in
-                self?.triggerStart(.failure(error))
+            .flatMapError { _ in
+                // we close the channel in case of error
+                context
+                    .channel
+                    .closeFuture
             }
     }
 
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case is ChannelSuccessEvent:
-            triggerStart(.success(()))
+            triggerStart()
         default:
             break
         }
         context.fireUserInboundEventTriggered(event)
     }
 
-    private func triggerStart(_ result: Result<Void, Error>) {
+    private func triggerStart() {
         guard !isStarted else { return }
         isStarted = true
-        handler(result)
+        handler()
     }
 }
 

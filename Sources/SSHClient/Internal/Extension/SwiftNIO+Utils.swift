@@ -14,3 +14,14 @@ extension Future {
         }
     }
 }
+
+extension Promise {
+    func end<E: Error>(_ result: Result<Value, E>) {
+        switch result {
+        case .success(let success):
+            succeed(success)
+        case .failure(let failure):
+            fail(failure)
+        }
+    }
+}

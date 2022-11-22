@@ -53,11 +53,11 @@ class IOSSHShell {
     private func trigger(_ event: SSHShellEvent) {
         let old = stateMachine.state
         let action = stateMachine.handle(event)
-        handle(action)
         let new = stateMachine.state
         if old != new {
             stateUpdateHandler?(new)
         }
+        handle(action)
     }
 
     private func handle(_ action: SSHShellAction) {
@@ -70,6 +70,8 @@ class IOSSHShell {
             startShell(channel)
         case .dataAvailable(let data):
             readHandler?(data)
+        case .callPromise(let promise, let result):
+            promise.end(result)
         case .none:
             break
         }
@@ -93,11 +95,11 @@ class IOSSHShell {
     }
 
     private func startShell(_ channel: Channel) {
-        channel.pipeline.addHandlers(
+        _ = channel.pipeline.addHandlers(
             [
                 StartShellHandler(
-                    handler: { [weak self] result in
-                        self?.trigger(.started(result))
+                    handler: { [weak self] in
+                        self?.trigger(.started)
                     }
                 ),
                 ReadShellHandler(onData: { [weak self] data in
@@ -106,8 +108,9 @@ class IOSSHShell {
                 NIOCloseOnErrorHandler(),
             ]
         )
-        .whenFailure { [weak self] error in
-            self?.trigger(.started(.failure(error)))
+        .flatMapError { _ in
+            // we close the channel in case of error
+            channel.closeFuture
         }
         channel.closeFuture.whenComplete { [weak self] _ in
             self?.trigger(.closed)

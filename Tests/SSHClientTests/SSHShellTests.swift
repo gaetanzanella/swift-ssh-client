@@ -24,7 +24,7 @@ class SSHShellTests: XCTestCase {
 
     func testShellLaunch() throws {
         let shell = try launchShell()
-        XCTAssertEqual(shell.states, [.ready])
+        XCTAssertEqual(shell.states, [])
         XCTAssertEqual(shell.state, .ready)
     }
 
@@ -37,7 +37,7 @@ class SSHShellTests: XCTestCase {
         }
         wait(for: [exp], timeout: 0.2)
         wait(timeout: 0.2)
-        XCTAssertEqual(shell.states, [.ready])
+        XCTAssertEqual(shell.states, [])
         XCTAssertEqual(shell.data[0], "Hello\n".data(using: .utf8))
     }
 
@@ -49,7 +49,7 @@ class SSHShellTests: XCTestCase {
             exp.fulfill()
         }
         wait(for: [exp], timeout: 0.2)
-        XCTAssertEqual(shell.states, [.ready, .closed])
+        XCTAssertEqual(shell.states, [.closed])
         XCTAssertEqual(shell.state, .closed)
     }
 
@@ -57,13 +57,13 @@ class SSHShellTests: XCTestCase {
 
     func testDisconnectionError() throws {
         let shell = try launchShell()
-        XCTAssertEqual(shell.states, [.ready])
+        XCTAssertEqual(shell.states, [])
         let exp = XCTestExpectation()
         connection.cancel {
             exp.fulfill()
         }
         wait(for: [exp], timeout: 0.2)
-        XCTAssertEqual(shell.states, [.ready, .failed(.requireConnection)])
+        XCTAssertEqual(shell.states, [.failed(.requireConnection)])
     }
 
     func testTimeoutError() throws {
