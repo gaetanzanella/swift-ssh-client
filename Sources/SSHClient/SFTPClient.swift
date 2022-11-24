@@ -8,7 +8,7 @@ public enum SFTPClientError: Error {
 }
 
 public final class SFTPClient: SSHSession {
-    public enum State: Equatable {
+    enum State: Equatable {
         case idle
         case ready
         case closed
@@ -18,9 +18,13 @@ public final class SFTPClient: SSHSession {
     private let updateQueue: DispatchQueue
     private var sftpChannel: SFTPChannel
 
-    public var state: State {
+    // For testing purpose.
+    // We expose a simple `closeHandler` instead of the state as the starting is
+    // entirely managed by `SSHConnection` and a `SFTPClient` can not restart.
+    var state: State {
         sftpChannel.state
     }
+    var stateUpdateHandler: ((State) -> Void)?
 
     // MARK: - Life Cycle
 
@@ -39,7 +43,7 @@ public final class SFTPClient: SSHSession {
 
     // MARK: - Public
 
-    public var stateUpdateHandler: ((State) -> Void)?
+    public var closeHandler: ((SFTPClientError?) -> Void)?
 
     public func listDirectory(atPath path: String,
                               completion: @escaping ((Result<[SFTPPathComponent], Error>) -> Void))
@@ -178,6 +182,16 @@ public final class SFTPClient: SSHSession {
         sftpChannel.stateUpdateHandler = { [weak self] state in
             self?.updateQueue.async {
                 self?.stateUpdateHandler?(state)
+                switch state {
+                case .idle:
+                    break
+                case .ready:
+                    break
+                case .closed:
+                    self?.closeHandler?(nil)
+                case .failed(let error):
+                    self?.closeHandler?(error)
+                }
             }
         }
     }

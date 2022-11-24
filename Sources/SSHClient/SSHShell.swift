@@ -8,7 +8,7 @@ public enum SSHShellError: Error {
 }
 
 public class SSHShell: SSHSession {
-    public enum State: Equatable {
+    enum State: Equatable {
         case idle
         case ready
         case closed
@@ -18,9 +18,13 @@ public class SSHShell: SSHSession {
     private let ioShell: IOSSHShell
     private let updateQueue: DispatchQueue
 
-    public var state: State {
+    // For testing purpose.
+    // We expose a simple `closeHandler` instead of the state as the starting is
+    // entirely managed by `SSHConnection` and a `SSHShell` can not restart.
+    var state: State {
         ioShell.state
     }
+    var stateUpdateHandler: ((State) -> Void)?
 
     // MARK: - Life Cycle
 
@@ -32,7 +36,7 @@ public class SSHShell: SSHSession {
     }
 
     public var readHandler: ((Data) -> Void)?
-    public var stateUpdateHandler: ((State) -> Void)?
+    public var closeHandler: ((SSHShellError?) -> Void)?
 
     // MARK: - SSHSession
 
@@ -61,6 +65,16 @@ public class SSHShell: SSHSession {
         ioShell.stateUpdateHandler = { [weak self] state in
             self?.updateQueue.async {
                 self?.stateUpdateHandler?(state)
+                switch state {
+                case .idle:
+                    break
+                case .ready:
+                    break
+                case .closed:
+                    self?.closeHandler?(nil)
+                case .failed(let error):
+                    self?.closeHandler?(error)
+                }
             }
         }
     }

@@ -1,6 +1,6 @@
 
 import Foundation
-import SSHClient
+@testable import SSHClient
 import XCTest
 
 class SSHShellTests: XCTestCase {
