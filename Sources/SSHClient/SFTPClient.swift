@@ -47,8 +47,7 @@ public final class SFTPClient: SSHSession {
     public var closeHandler: ((SFTPClientError?) -> Void)?
 
     public func listDirectory(atPath path: String,
-                              completion: @escaping ((Result<[SFTPPathComponent], Error>) -> Void))
-    {
+                              completion: @escaping ((Result<[SFTPPathComponent], Error>) -> Void)) {
         let newPath = recursivelyExecute(
             { path in
                 self.sftpChannel.realpath(path: path).map {
