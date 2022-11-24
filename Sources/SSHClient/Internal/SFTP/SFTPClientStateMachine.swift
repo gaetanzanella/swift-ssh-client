@@ -14,6 +14,8 @@ enum SFTPClientEvent {
 enum SFTPClientAction {
     case emitMessage(SFTPMessage, Channel)
     case disconnect(Channel)
+    case callPromise(Promise<Void>, Result<Void, Error>)
+    case callResponsePromise(Promise<SFTPResponse>, Result<SFTPResponse, Error>)
     case none
 }
 
@@ -43,12 +45,29 @@ struct SFTPClientStateMachine {
         case idle
         case sentVersion(Channel, Promise<Void>)
         case ready(Channel, SFTPInflightRequestList)
-        case disconnecting(Channel, Promise<Void>)
+        case disconnecting(Channel, Promise<Void>, Error?)
         case failed(Error)
         case disconnected
     }
 
     private var internalState: InternalState
+
+    var state: SFTPClient.State {
+        switch internalState {
+        case .idle:
+            return .idle
+        case .sentVersion:
+            return .idle
+        case .ready:
+            return .ready
+        case .disconnecting:
+            return .ready
+        case .failed(let error):
+            return .failed((error as? SFTPClientError) ?? .unknown)
+        case .disconnected:
+            return .closed
+        }
+    }
 
     // MARK: - Life Cycle
 
@@ -69,11 +88,9 @@ struct SFTPClientStateMachine {
                     channel
                 )
             case .requestMessage(_, let promise):
-                promise.fail(SFTPError.connectionClosed)
-                return .none
+                return .callResponsePromise(promise, .failure(SFTPError.connectionClosed))
             case .requestDisconnection(let promise):
-                promise.succeed(())
-                return .none
+                return .callPromise(promise, .success(()))
             case .messageSent, .messageFailed, .disconnected, .inboundMessage:
                 assertionFailure("Unexpected state")
                 return .none
@@ -89,7 +106,8 @@ struct SFTPClientStateMachine {
                         startPromise.fail(error)
                         internalState = .disconnecting(
                             channel,
-                            startPromise
+                            startPromise,
+                            SFTPError.unsupportedVersion(version.version)
                         )
                         return .disconnect(channel)
                     case .v3:
@@ -103,13 +121,15 @@ struct SFTPClientStateMachine {
                     return .none
                 }
             case .requestDisconnection(let endPromise):
-                startPromise.fail(SFTPError.connectionClosed)
-                internalState = .disconnecting(channel, endPromise)
+                // we call the pending completions with an error once disconnected
+                startPromise.completeWith(endPromise.futureResult.flatMapErrorThrowing { _ in
+                    throw SFTPError.connectionClosed
+                })
+                internalState = .disconnecting(channel, endPromise, nil)
                 return .disconnect(channel)
             case .disconnected:
                 internalState = .failed(SFTPError.connectionClosed)
-                startPromise.fail(SFTPError.connectionClosed)
-                return .none
+                return .callPromise(startPromise, .failure(SFTPError.connectionClosed))
             case .messageSent:
                 return .none
             case .start, .requestMessage, .messageFailed:
@@ -135,8 +155,7 @@ struct SFTPClientStateMachine {
                 }
             case .requestMessage(let message, let promise):
                 guard let id = message.requestID else {
-                    promise.fail(SFTPError.invalidResponse)
-                    return .none
+                    return .callResponsePromise(promise, .failure(SFTPError.invalidResponse))
                 }
                 inflightRequests.set(
                     promise,
@@ -169,18 +188,21 @@ struct SFTPClientStateMachine {
                     return .none
                 }
             case .requestDisconnection(let promise):
-                internalState = .disconnecting(channel, promise)
+                internalState = .disconnecting(channel, promise, nil)
                 return .disconnect(channel)
             case .start:
                 assertionFailure("Unexpected state")
                 return .none
             }
-        case .disconnecting(_, let promise):
+        case .disconnecting(_, let promise, let error):
             switch event {
             case .disconnected:
-                internalState = .disconnected
-                promise.succeed(())
-                return .none
+                if let error {
+                    internalState = .failed(error)
+                } else {
+                    internalState = .disconnected
+                }
+                return .callPromise(promise, .success(()))
             case .inboundMessage, .requestDisconnection, .start, .requestMessage, .messageSent, .messageFailed:
                 assertionFailure("Unexpected state")
                 return .none
@@ -188,11 +210,11 @@ struct SFTPClientStateMachine {
         case .disconnected, .failed:
             switch event {
             case .requestMessage(_, let promise):
-                promise.fail(SFTPError.invalidResponse)
+                return .callResponsePromise(promise, .failure(SFTPError.invalidResponse))
             case .requestDisconnection(let promise):
-                promise.succeed(())
+                return .callPromise(promise, .success(()))
             case .start(_, let promise):
-                promise.fail(SFTPError.connectionClosed)
+                return .callPromise(promise, .failure(SFTPError.invalidResponse))
             case .inboundMessage, .messageSent, .messageFailed, .disconnected:
                 assertionFailure("Unexpected state")
             }

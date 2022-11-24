@@ -130,24 +130,22 @@ class IOSSHConnection {
                         $0.authenticated
                     }
                     .map { channel }
+                    .flatMapError { error in
+                        // we close the created channel and spread the error
+                        channel
+                            .close()
+                            .flatMapThrowing {
+                                throw error
+                            }
+                    }
             }
-        channel
-            .whenComplete { [weak self] result in
-                switch result {
-                case .failure(SSHAuthenticationHandler.AuthenticationError.endedChannel):
-                    break
-                case .failure(SSHAuthenticationHandler.AuthenticationError.timeout):
-                    self?.trigger(.error(.timeout))
-                case .failure(let error):
-                    self?.trigger(.error((error as? SSHConnectionError) ?? .unknown))
-                case .success(let channel):
-                    self?.trigger(.authenticated(channel))
-                }
+        channel.whenSuccess { [weak self] channel in
+            channel.closeFuture.whenComplete { _ in
+                self?.trigger(.disconnected)
             }
-        channel.flatMap {
-            $0.closeFuture
+            self?.trigger(.authenticated(channel))
         }
-        .whenComplete { [weak self] _ in
+        channel.whenFailure { [weak self] channel in
             self?.trigger(.disconnected)
         }
     }

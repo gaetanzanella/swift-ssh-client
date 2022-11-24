@@ -10,7 +10,6 @@ enum SSHConnectionEvent {
     case connected(Channel)
     case authenticated(Channel)
     case disconnected
-    case error(SSHConnectionError)
 }
 
 enum SSHConnectionAction {
@@ -72,10 +71,6 @@ struct SSHConnectionStateMachine {
                 return .connect(timeout)
             case .requestSession(_, _, let promise):
                 return .callPromise(promise, .failure(.requireActiveConnection))
-            case .error:
-                // Should be an error due to a connection cancelling
-                assertionFailure("Invalid transition")
-                return .none
             case .connected, .authenticated, .disconnected:
                 assertionFailure("Invalid transition")
                 return .none
@@ -89,11 +84,8 @@ struct SSHConnectionStateMachine {
                 return .callPromise(promise, .success(()))
             case .requestSession(let session, let timeout, let promise):
                 return .requestSession(channel, session, timeout, promise)
-            case .error(let error):
-                internalState = .failed(error)
-                return .none
             case .disconnected:
-                internalState = .idle
+                internalState = .failed(.unknown)
                 return .none
             case .authenticated:
                 assertionFailure("Invalid transition")
@@ -108,20 +100,16 @@ struct SSHConnectionStateMachine {
                 internalState = .authenticating(channel, promise)
                 // automatically done
                 return .none
-            case .requestDisconnection:
-                // TODO:
-                return .none
+            case .requestDisconnection(let promise):
+                return .callPromise(promise, .failure(.requireActiveConnection))
             case .requestSession(_, _, let promise):
                 return .callPromise(promise, .failure(.requireActiveConnection))
-            case .error(let error):
-                internalState = .failed(error)
-                return .callPromise(promise, .failure(error))
             case .requestConnection(_, let new):
                 new.completeWith(promise.futureResult)
                 return .none
             case .disconnected:
-                assertionFailure("Invalid transition")
-                return .none
+                internalState = .failed(.unknown)
+                return .callPromise(promise, .failure(.unknown))
             case .authenticated:
                 assertionFailure("Invalid transition")
                 return .none
@@ -137,7 +125,7 @@ struct SSHConnectionStateMachine {
             case .requestDisconnection(let new):
                 // we call the pending completions with an error once disconnected
                 promise.completeWith(
-                    new.futureResult.flatMapThrowing { throw SSHConnectionError.unknown }
+                    new.futureResult.flatMapThrowing { throw SSHConnectionError.requireActiveConnection }
                 )
                 internalState = .disconnecting(
                     channel,
@@ -147,18 +135,11 @@ struct SSHConnectionStateMachine {
                 return .disconnect(channel)
             case .requestSession(_, _, let promise):
                 return .callPromise(promise, .failure(.requireActiveConnection))
-            case .error(let error):
-                internalState = .disconnecting(
-                    channel,
-                    promise,
-                    error: error
-                )
-                return .disconnect(channel)
             case .connected:
                 assertionFailure("Invalid transition")
                 return .none
             case .disconnected:
-                internalState = .failed(SSHConnectionError.unknown)
+                internalState = .failed(.unknown)
                 return .callPromise(promise, .failure(.unknown))
             }
         case .disconnecting(_, let promise, let error):
@@ -166,14 +147,11 @@ struct SSHConnectionStateMachine {
             case .disconnected:
                 if let error = error {
                     internalState = .failed(error)
-                    return .callPromise(promise, .failure(error))
+                    return .callPromise(promise, .success(()))
                 } else {
                     internalState = .idle
                     return .callPromise(promise, .success(()))
                 }
-            case .error(let error):
-                internalState = .failed(error)
-                return .callPromise(promise, .failure(error))
             case .requestSession(_, _, let promise):
                 return .callPromise(promise, .failure(.requireActiveConnection))
             case .requestDisconnection(let new):
@@ -198,9 +176,6 @@ struct SSHConnectionStateMachine {
                 return .connect(timeout)
             case .requestSession(_, _, let promise):
                 return .callPromise(promise, .failure(.requireActiveConnection))
-            case .error(let error):
-                internalState = .failed(error)
-                return .none
             case .disconnected:
                 // Disconnection after failure
                 return .none

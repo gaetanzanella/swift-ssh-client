@@ -2,9 +2,25 @@ import Foundation
 import NIO
 import NIOCore
 
+public enum SFTPClientError: Error {
+    case requireConnection
+    case unknown
+}
+
 public final class SFTPClient: SSHSession {
+    public enum State: Equatable {
+        case idle
+        case ready
+        case closed
+        case failed(SFTPClientError)
+    }
+
     private let updateQueue: DispatchQueue
     private var sftpChannel: SFTPChannel
+
+    public var state: State {
+        sftpChannel.state
+    }
 
     // MARK: - Life Cycle
 
@@ -12,6 +28,7 @@ public final class SFTPClient: SSHSession {
          updateQueue: DispatchQueue) {
         self.sftpChannel = sftpChannel
         self.updateQueue = updateQueue
+        setupIOChannel()
     }
 
     // MARK: - SSHSession
@@ -21,6 +38,8 @@ public final class SFTPClient: SSHSession {
     }
 
     // MARK: - Public
+
+    public var stateUpdateHandler: ((State) -> Void)?
 
     public func listDirectory(atPath path: String,
                               completion: @escaping ((Result<[SFTPPathComponent], Error>) -> Void))
@@ -154,6 +173,14 @@ public final class SFTPClient: SSHSession {
     }
 
     // MARK: - Private
+
+    private func setupIOChannel() {
+        sftpChannel.stateUpdateHandler = { [weak self] state in
+            self?.updateQueue.async {
+                self?.stateUpdateHandler?(state)
+            }
+        }
+    }
 
     private func recursivelyExecute<T, R>(_ future: @escaping (R) -> EventLoopFuture<T>,
                                           merge: @escaping (T, R) -> (R, Bool),

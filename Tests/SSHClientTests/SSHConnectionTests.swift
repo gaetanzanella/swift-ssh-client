@@ -69,8 +69,8 @@ class SSHConnectionTests: XCTestCase {
         connection.ssh.start(withTimeout: 1.0) { result in
             XCTAssertTrue(result.isFailure)
             /* Seems like the only way to detect failure is to use a timeout :/  */
-            XCTAssertEqual(connection.state, .failed(.timeout))
-            XCTAssertEqual(connection.updates, [.failed(.timeout)])
+            XCTAssertEqual(connection.state, .failed(.unknown))
+            XCTAssertEqual(connection.updates, [.failed(.unknown)])
             self.wait(timeout: 0.2)
             XCTAssertFalse(self.server.hasActiveChild)
             expect.fulfill()
@@ -89,8 +89,8 @@ class SSHConnectionTests: XCTestCase {
         let expect = XCTestExpectation()
         connection.ssh.start(withTimeout: 1.0) { result in
             XCTAssertTrue(result.isFailure)
-            XCTAssertEqual(connection.state, .failed(.timeout))
-            XCTAssertEqual(connection.updates, [.failed(.timeout)])
+            XCTAssertEqual(connection.state, .failed(.unknown))
+            XCTAssertEqual(connection.updates, [.failed(.unknown)])
             self.wait(timeout: 0.1)
             XCTAssertFalse(self.server.hasActiveChild)
             expect.fulfill()
@@ -163,7 +163,7 @@ class SSHConnectionTests: XCTestCase {
         wait(for: [connect], timeout: 1)
         server.end()
         wait(timeout: 0.3)
-        XCTAssertEqual(connection.updates, [.ready, .idle])
+        XCTAssertEqual(connection.updates, [.ready, .failed(.unknown)])
     }
 
     func testReconnection() throws {
