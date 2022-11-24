@@ -24,6 +24,7 @@ public class SSHShell: SSHSession {
     var state: State {
         ioShell.state
     }
+
     var stateUpdateHandler: ((State) -> Void)?
 
     // MARK: - Life Cycle

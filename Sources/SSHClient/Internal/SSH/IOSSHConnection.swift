@@ -145,7 +145,7 @@ class IOSSHConnection {
             }
             self?.trigger(.authenticated(channel))
         }
-        channel.whenFailure { [weak self] channel in
+        channel.whenFailure { [weak self] _ in
             self?.trigger(.disconnected)
         }
     }

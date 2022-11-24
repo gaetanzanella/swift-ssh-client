@@ -24,6 +24,7 @@ public final class SFTPClient: SSHSession {
     var state: State {
         sftpChannel.state
     }
+
     var stateUpdateHandler: ((State) -> Void)?
 
     // MARK: - Life Cycle

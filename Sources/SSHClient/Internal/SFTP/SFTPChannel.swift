@@ -238,7 +238,7 @@ class IOSFTPChannel: SFTPChannel {
 
     private func trigger(_ event: SFTPClientEvent) {
         let old = state
-        let action = self.stateMachine.handle(event)
+        let action = stateMachine.handle(event)
         let new = state
         if old != new {
             stateUpdateHandler?(new)
