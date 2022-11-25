@@ -2,9 +2,30 @@ import Foundation
 import NIO
 import NIOCore
 
-public final class SFTPClient {
+public enum SFTPClientError: Error {
+    case requireConnection
+    case unknown
+}
+
+public final class SFTPClient: SSHSession {
+    enum State: Equatable {
+        case idle
+        case ready
+        case closed
+        case failed(SFTPClientError)
+    }
+
     private let updateQueue: DispatchQueue
     private var sftpChannel: SFTPChannel
+
+    // For testing purpose.
+    // We expose a simple `closeHandler` instead of the state as the starting is
+    // entirely managed by `SSHConnection` and a `SFTPClient` can not restart.
+    var state: State {
+        sftpChannel.state
+    }
+
+    var stateUpdateHandler: ((State) -> Void)?
 
     // MARK: - Life Cycle
 
@@ -12,9 +33,10 @@ public final class SFTPClient {
          updateQueue: DispatchQueue) {
         self.sftpChannel = sftpChannel
         self.updateQueue = updateQueue
+        setupIOChannel()
     }
 
-    // MARK: - Internal
+    // MARK: - SSHSession
 
     func start(in context: SSHSessionContext) {
         sftpChannel.start(in: context)
@@ -22,9 +44,10 @@ public final class SFTPClient {
 
     // MARK: - Public
 
+    public var closeHandler: ((SFTPClientError?) -> Void)?
+
     public func listDirectory(atPath path: String,
-                              completion: @escaping ((Result<[SFTPPathComponent], Error>) -> Void))
-    {
+                              completion: @escaping ((Result<[SFTPPathComponent], Error>) -> Void)) {
         let newPath = recursivelyExecute(
             { path in
                 self.sftpChannel.realpath(path: path).map {
@@ -155,6 +178,24 @@ public final class SFTPClient {
 
     // MARK: - Private
 
+    private func setupIOChannel() {
+        sftpChannel.stateUpdateHandler = { [weak self] state in
+            self?.updateQueue.async {
+                self?.stateUpdateHandler?(state)
+                switch state {
+                case .idle:
+                    break
+                case .ready:
+                    break
+                case .closed:
+                    self?.closeHandler?(nil)
+                case .failed(let error):
+                    self?.closeHandler?(error)
+                }
+            }
+        }
+    }
+
     private func recursivelyExecute<T, R>(_ future: @escaping (R) -> EventLoopFuture<T>,
                                           merge: @escaping (T, R) -> (R, Bool),
                                           response: R) -> EventLoopFuture<R> {
@@ -173,5 +214,3 @@ public final class SFTPClient {
         }
     }
 }
-
-extension SFTPClient: SSHSession {}

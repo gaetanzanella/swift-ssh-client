@@ -7,6 +7,9 @@ protocol SFTPChannel {
     func close() -> Future<Void>
     func start(in context: SSHSessionContext)
 
+    var state: SFTPClient.State { get }
+    var stateUpdateHandler: ((SFTPClient.State) -> Void)? { get set }
+
     func openFile(_ file: SFTPMessage.OpenFile.Payload) -> Future<SFTPMessage.Handle>
     func closeFile(_ file: SFTPFileHandle) -> Future<SFTPMessage.Status>
     func readFile(_ file: SFTPMessage.ReadFile.Payload) -> Future<SFTPMessage.ReadFile.Response>
@@ -29,19 +32,28 @@ class IOSFTPChannel: SFTPChannel {
     // MARK: - Life Cycle
 
     init(idAllocator: SFTPRequestIDAllocator,
-         eventLoop: EventLoop,
-         stateMachine: SFTPClientStateMachine) {
-        self.stateMachine = stateMachine
+         eventLoop: EventLoop) {
+        stateMachine = SFTPClientStateMachine()
         self.eventLoop = eventLoop
         self.idAllocator = idAllocator
     }
 
     // MARK: - SFTP
 
+    var state: SFTPClient.State {
+        stateMachine.state
+    }
+
+    var stateUpdateHandler: ((SFTPClient.State) -> Void)?
+
     func close() -> Future<Void> {
         let promise = eventLoop.makePromise(of: Void.self)
-        trigger(.requestDisconnection(promise))
-        return promise.futureResult
+        return eventLoop.submit {
+            self.trigger(.requestDisconnection(promise))
+        }
+        .flatMap {
+            promise.futureResult
+        }
     }
 
     func openFile(_ file: SFTPMessage.OpenFile.Payload) -> Future<SFTPMessage.Handle> {
@@ -224,11 +236,14 @@ class IOSFTPChannel: SFTPChannel {
         }
     }
 
-    fileprivate func trigger(_ event: SFTPClientEvent) {
-        eventLoop.execute {
-            let action = self.stateMachine.handle(event)
-            self.handle(action)
+    private func trigger(_ event: SFTPClientEvent) {
+        let old = state
+        let action = stateMachine.handle(event)
+        let new = state
+        if old != new {
+            stateUpdateHandler?(new)
         }
+        handle(action)
     }
 
     private func handle(_ action: SFTPClientAction) {
@@ -246,8 +261,11 @@ class IOSFTPChannel: SFTPChannel {
                 }
         case .disconnect(let channel):
             // SFTPChannel already listens `close` event in `launch`
-            _ = channel
-                .close()
+            channel.close(promise: nil)
+        case .callPromise(let promise, let result):
+            promise.end(result)
+        case .callResponsePromise(let promise, let result):
+            promise.end(result)
         case .none:
             break
         }

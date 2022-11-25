@@ -1,12 +1,11 @@
 
 import Foundation
-import SSHClient
+@testable import SSHClient
 import XCTest
 
 class SFTPTests: XCTestCase {
     var sftpServer: SFTPServer!
     var connection: SSHConnection!
-    var client: SFTPClient!
 
     override func setUp() {
         sftpServer = SFTPServer(configuration: .docker)
@@ -21,7 +20,7 @@ class SFTPTests: XCTestCase {
     }
 
     override func tearDown() {
-        connection.end {}
+        connection.cancel {}
         try! sftpServer.removeItem(
             atPath: sftpServer.preferredWorkingDirectoryPath()
         )
@@ -485,7 +484,7 @@ class SFTPTests: XCTestCase {
                 inner.fulfill()
                 completion()
             }
-            self.connection.end {}
+            self.connection.cancel {}
         } completion: { result in
             XCTAssertTrue(result.isFailure)
             exp.fulfill()

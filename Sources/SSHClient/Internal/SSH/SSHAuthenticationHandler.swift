@@ -1,9 +1,3 @@
-//
-//  File.swift
-//
-//
-//  Created by Gaetan Zanella on 29/10/2022.
-//
 
 import Foundation
 import NIO
@@ -17,8 +11,7 @@ struct BuiltInSSHAuthenticationValidator: NIOSSHClientUserAuthenticationDelegate
     let authentication: SSHAuthentication
 
     func nextAuthenticationType(availableMethods: NIOSSHAvailableUserAuthenticationMethods,
-                                nextChallengePromise: EventLoopPromise<NIOSSHUserAuthenticationOffer?>)
-    {
+                                nextChallengePromise: EventLoopPromise<NIOSSHUserAuthenticationOffer?>) {
         switch authentication.method.implementation {
         case .none:
             nextChallengePromise.succeed(

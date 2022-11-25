@@ -10,20 +10,19 @@ class StartShellHandler: ChannelInboundHandler {
 
     typealias InboundIn = SSHChannelData
 
-    let startPromise: EventLoopPromise<Void>
+    let handler: () -> Void
 
-    init(eventLoop: EventLoop) {
-        let promise = eventLoop.makePromise(of: Void.self)
-        startPromise = promise
+    // To avoid multiple starts
+    private var isStarted = false
+
+    init(handler: @escaping () -> Void) {
+        self.handler = handler
     }
 
-    deinit {
-        startPromise.fail(StartShellError.endedChannel)
-    }
+    deinit {}
 
     func handlerAdded(context: ChannelHandlerContext) {
-        guard context.channel.isActive else { return }
-        context
+        _ = context
             .channel
             .setOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             .flatMap {
@@ -35,18 +34,28 @@ class StartShellHandler: ChannelInboundHandler {
                 )
                 return promise.futureResult
             }
-            .whenFailure {
-                self.startPromise.fail($0)
+            .flatMapError { _ in
+                // we close the channel in case of error
+                context
+                    .channel
+                    .closeFuture
             }
     }
 
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case is ChannelSuccessEvent:
-            startPromise.succeed(())
+            triggerStart()
         default:
-            context.fireUserInboundEventTriggered(event)
+            break
         }
+        context.fireUserInboundEventTriggered(event)
+    }
+
+    private func triggerStart() {
+        guard !isStarted else { return }
+        isStarted = true
+        handler()
     }
 }
 
@@ -73,25 +82,5 @@ class ReadShellHandler: ChannelInboundHandler {
             break
         }
         context.fireChannelRead(data)
-    }
-}
-
-class ErrorHandler: ChannelInboundHandler {
-    typealias InboundIn = SSHChannelData
-
-    let onClose: (SSHConnection.ConnectionError) -> Void
-    private var error: Error?
-
-    init(onClose: @escaping (SSHConnection.ConnectionError) -> Void) {
-        self.onClose = onClose
-    }
-
-    func errorCaught(context: ChannelHandlerContext, error: Error) {
-        self.error = error
-        _ = context.close()
-    }
-
-    func channelInactive(context _: ChannelHandlerContext) {
-        onClose(.requireActiveConnection)
     }
 }
