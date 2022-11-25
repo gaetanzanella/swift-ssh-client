@@ -37,7 +37,7 @@ class SSHShellTests: XCTestCase {
             exp.fulfill()
         }
         wait(for: [exp], timeout: 2)
-        wait(timeout: 1)
+        wait(timeout: 2)
         XCTAssertEqual(shell.states, [.failed(.unknown)])
         XCTAssertEqual(shell.data[0], "This service allows sftp connections only.\n".data(using: .utf8))
     }
@@ -64,7 +64,7 @@ class SSHShellTests: XCTestCase {
             exp.fulfill()
         }
         wait(for: [exp], timeout: 2)
-        XCTAssertEqual(shell.states, [.failed(.requireConnection)])
+        XCTAssertEqual(shell.states, [.failed(.unknown)])
     }
 
     func testTimeoutError() throws {
