@@ -82,8 +82,8 @@ struct SSHShellStateMachine {
                 internalState = .closing(promise)
                 return .close(channel)
             case .closed:
-                internalState = .failed(SSHShellError.requireConnection)
-                return .callPromise(promise, .failure(SSHShellError.requireConnection))
+                internalState = .failed(SSHShellError.unknown)
+                return .callPromise(promise, .failure(SSHShellError.unknown))
             case .read:
                 return .none
             }
@@ -102,7 +102,7 @@ struct SSHShellStateMachine {
             case .read(let data):
                 return .dataAvailable(data)
             case .closed:
-                internalState = .failed(SSHShellError.requireConnection)
+                internalState = .failed(SSHShellError.unknown)
                 return .none
             }
         case .closing(let closingPromise):
