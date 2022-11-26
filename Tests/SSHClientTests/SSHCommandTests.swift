@@ -4,7 +4,6 @@ import Foundation
 import XCTest
 
 class SSHCommandTests: XCTestCase {
-
     var sshServer: SSHServer!
     var connection: SSHConnection!
 

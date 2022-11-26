@@ -151,12 +151,12 @@ public class SSHConnection {
                 onChunk: { chunk in
                     switch chunk.channel {
                     case .standard:
-                        if (standard == nil) {
+                        if standard == nil {
                             standard = Data()
                         }
                         standard?.append(chunk.data)
                     case .error:
-                        if (error == nil) {
+                        if error == nil {
                             error = Data()
                         }
                         error?.append(chunk.data)
@@ -167,7 +167,7 @@ public class SSHConnection {
             timeout: timeout
         )
         .whenComplete(on: updateQueue) { result in
-            completion(result.map { response in
+            completion(result.map { _ in
                 SSHCommandCapture(
                     command: command,
                     standardOutput: standard,

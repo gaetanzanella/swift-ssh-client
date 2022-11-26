@@ -31,7 +31,6 @@ public struct SSHCommandCapture {
 }
 
 extension SSHCommand: ExpressibleByStringLiteral {
-
     public init(stringLiteral value: String) {
         self.init(value)
     }
