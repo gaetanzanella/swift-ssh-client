@@ -7,12 +7,7 @@ class SSHConnectionTests: XCTestCase {
     var server: SSHServer!
 
     override func setUp() {
-        server = SSHServer(
-            expectedUsername: "user",
-            expectedPassword: "password",
-            host: "localhost",
-            port: 23
-        )
+        server = DockerSSHServer()
         try! server.run()
     }
 
@@ -35,7 +30,6 @@ class SSHConnectionTests: XCTestCase {
             XCTAssertTrue(result.isSuccess)
             XCTAssertEqual(connection.state, .ready)
             XCTAssertEqual(connection.updates, [.ready])
-            XCTAssertTrue(self.server.hasActiveChild)
             expect.fulfill()
         }
         wait(for: [expect], timeout: 3)

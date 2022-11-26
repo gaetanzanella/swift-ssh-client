@@ -99,26 +99,39 @@ public class SSHConnection {
     public func execute(_ command: SSHCommand,
                         withTimeout timeout: TimeInterval,
                         completion: @escaping (Result<SSHCommandStatus, Error>) -> Void) {
+        var status: SSHCommandStatus?
         ioConnection.execute(
             SSHCommandInvocation(
                 command: command,
                 wantsReply: false,
-                onChunk: nil
+                onChunk: nil,
+                onStatus: { st in status = st }
             ),
             timeout: timeout
         )
-        .whenComplete(on: updateQueue, completion)
+        .whenComplete(on: updateQueue) { result in
+            completion(result.flatMap { _ in
+                Result(catching: {
+                    if let status = status {
+                        return status
+                    }
+                    throw SSHConnectionError.unknown
+                })
+            })
+        }
     }
 
     public func stream(_ command: SSHCommand,
                        withTimeout timeout: TimeInterval,
                        onChunk: @escaping (SSHCommandChunk) -> Void,
-                       completion: @escaping (Result<SSHCommandStatus, Error>) -> Void) {
+                       onStatus: @escaping (SSHCommandStatus) -> Void,
+                       completion: @escaping (Result<Void, Error>) -> Void) {
         ioConnection.execute(
             SSHCommandInvocation(
                 command: command,
                 wantsReply: true,
-                onChunk: onChunk
+                onChunk: onChunk,
+                onStatus: onStatus
             ),
             timeout: timeout
         )
@@ -130,6 +143,7 @@ public class SSHConnection {
                         completion: @escaping (Result<SSHCommandCapture, Error>) -> Void) {
         var standard: Data?
         var error: Data?
+        var status: SSHCommandStatus?
         ioConnection.execute(
             SSHCommandInvocation(
                 command: command,
@@ -137,11 +151,18 @@ public class SSHConnection {
                 onChunk: { chunk in
                     switch chunk.channel {
                     case .standard:
+                        if (standard == nil) {
+                            standard = Data()
+                        }
                         standard?.append(chunk.data)
                     case .error:
+                        if (error == nil) {
+                            error = Data()
+                        }
                         error?.append(chunk.data)
                     }
-                }
+                },
+                onStatus: { st in status = st }
             ),
             timeout: timeout
         )
@@ -151,7 +172,7 @@ public class SSHConnection {
                     command: command,
                     standardOutput: standard,
                     errorOutput: error,
-                    status: response
+                    status: status
                 )
             })
         }

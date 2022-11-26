@@ -27,5 +27,12 @@ public struct SSHCommandCapture {
     public let command: SSHCommand
     public let standardOutput: Data?
     public let errorOutput: Data?
-    public let status: SSHCommandStatus
+    public let status: SSHCommandStatus?
+}
+
+extension SSHCommand: ExpressibleByStringLiteral {
+
+    public init(stringLiteral value: String) {
+        self.init(value)
+    }
 }

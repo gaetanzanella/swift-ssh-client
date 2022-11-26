@@ -4,16 +4,16 @@ import NIOSSH
 
 class SSHCommandSession: SSHSession {
     private let invocation: SSHCommandInvocation
-    private let promise: Promise<SSHCommandStatus>
+    private let promise: Promise<Void>
 
-    var futureResult: Future<SSHCommandStatus> {
+    var futureResult: Future<Void> {
         promise.futureResult
     }
 
     // MARK: - Life Cycle
 
     init(invocation: SSHCommandInvocation,
-         promise: Promise<SSHCommandStatus>) {
+         promise: Promise<Void>) {
         self.invocation = invocation
         self.promise = promise
     }
@@ -41,43 +41,49 @@ private class SSHCommandHandler: ChannelDuplexHandler {
     typealias OutboundOut = SSHChannelData
 
     private let invocation: SSHCommandInvocation
-    private let promise: Promise<SSHCommandStatus>
+    private let promise: Promise<Void>
 
     // MARK: - Life Cycle
 
     init(invocation: SSHCommandInvocation,
-         promise: Promise<SSHCommandStatus>) {
+         promise: Promise<Void>) {
         self.invocation = invocation
         self.promise = promise
     }
 
     func handlerAdded(context: ChannelHandlerContext) {
-        context.channel.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).whenFailure { _ in
-            context.close(promise: nil)
-        }
+        let execRequest = SSHChannelRequestEvent.ExecRequest(
+            command: invocation.command.command,
+            wantReply: invocation.wantsReply
+        )
+        context
+            .channel
+            .setOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+            .flatMap {
+                context.triggerUserOutboundEvent(execRequest)
+            }
+            .whenFailure { _ in
+                context.close(promise: nil)
+            }
     }
 
     func handlerRemoved(context: ChannelHandlerContext) {
         promise.fail(SSHConnectionError.unknown)
     }
 
-    func channelActive(context: ChannelHandlerContext) {
-        let execRequest = SSHChannelRequestEvent.ExecRequest(
-            command: invocation.command.command,
-            wantReply: invocation.wantsReply
-        )
-        context.triggerUserOutboundEvent(execRequest).whenFailure { _ in
-            context.close(promise: nil)
-        }
-    }
-
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case let event as SSHChannelRequestEvent.ExitStatus:
-            promise.succeed(
-                SSHCommandStatus(exitStatus: event.exitStatus)
-            )
+            invocation.onStatus?(SSHCommandStatus(exitStatus: event.exitStatus))
+        case let event as ChannelEvent:
+            switch event {
+            case .inputClosed:
+                promise.succeed(())
+            case .outputClosed:
+                promise.fail(SSHConnectionError.unknown)
+            }
         default:
+            print("✅", event)
             context.fireUserInboundEventTriggered(event)
         }
     }

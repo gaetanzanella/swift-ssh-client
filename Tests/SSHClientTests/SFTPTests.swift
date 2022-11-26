@@ -498,7 +498,7 @@ class SFTPTests: XCTestCase {
             port: connection.port + 1,
             authentication: connection.authentication
         )
-        let sshServerWithoutSFTP = SSHServer(
+        let sshServerWithoutSFTP = IOSSHServer(
             expectedUsername: newConnection.authentication.username,
             expectedPassword: sftpServer.password,
             host: newConnection.host,
