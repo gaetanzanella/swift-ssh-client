@@ -178,7 +178,6 @@ class IOSSHConnection {
                         session.start(
                             in: SSHSessionContext(
                                 channel: channel,
-                                sshHandler: handler,
                                 promise: createSession
                             )
                         )

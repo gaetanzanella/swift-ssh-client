@@ -5,7 +5,6 @@ import NIOSSH
 
 struct SSHSessionContext {
     let channel: Channel
-    let sshHandler: NIOSSHHandler
     let promise: Promise<Void>
 }
 
