@@ -7,7 +7,7 @@ let package = Package(
     name: "swift-ssh-client",
     platforms: [
         .iOS(.v13),
-        .macOS(.v11),
+        .macOS(.v10_15)
     ],
     products: [
         .library(
@@ -16,8 +16,7 @@ let package = Package(
         ),
     ],
     dependencies: [
-        // TODO: Use version once available…
-        .package(url: "https://github.com/apple/swift-nio-ssh", revision: "d6940e991502ec779f94cb385df65fe48ea09504"),
+        .package(url: "https://github.com/apple/swift-nio-ssh", from: "0.5.0"),
         .package(url: "https://github.com/apple/swift-crypto.git", "1.0.0" ..< "2.1.0"),
     ],
     targets: [
