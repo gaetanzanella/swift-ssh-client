@@ -48,7 +48,7 @@ public class SSHConnection {
         setupIOConnection()
     }
 
-    // MARK: - Public
+    // MARK: - Connection
 
     public var stateUpdateHandler: ((State) -> Void)?
 
@@ -62,6 +62,8 @@ public class SSHConnection {
             completion()
         }
     }
+
+    // MARK: - Clients
 
     public func requestShell(withTimeout timeout: TimeInterval,
                              updateQueue: DispatchQueue = .main,
@@ -90,6 +92,69 @@ public class SSHConnection {
         ioConnection.start(sftpClient, timeout: timeout)
             .map { sftpClient }
             .whenComplete(on: updateQueue, completion)
+    }
+
+    // MARK: - Commands
+
+    public func execute(_ command: SSHCommand,
+                        withTimeout timeout: TimeInterval,
+                        completion: @escaping (Result<SSHCommandStatus, Error>) -> Void) {
+        ioConnection.execute(
+            SSHCommandInvocation(
+                command: command,
+                wantsReply: false,
+                onChunk: nil
+            ),
+            timeout: timeout
+        )
+        .whenComplete(on: updateQueue, completion)
+    }
+
+    public func stream(_ command: SSHCommand,
+                       withTimeout timeout: TimeInterval,
+                       onChunk: @escaping (SSHCommandChunk) -> Void,
+                       completion: @escaping (Result<SSHCommandStatus, Error>) -> Void) {
+        ioConnection.execute(
+            SSHCommandInvocation(
+                command: command,
+                wantsReply: true,
+                onChunk: onChunk
+            ),
+            timeout: timeout
+        )
+        .whenComplete(on: updateQueue, completion)
+    }
+
+    public func capture(_ command: SSHCommand,
+                        withTimeout timeout: TimeInterval,
+                        completion: @escaping (Result<SSHCommandCapture, Error>) -> Void) {
+        var standard: Data?
+        var error: Data?
+        ioConnection.execute(
+            SSHCommandInvocation(
+                command: command,
+                wantsReply: true,
+                onChunk: { chunk in
+                    switch chunk.channel {
+                    case .standard:
+                        standard?.append(chunk.data)
+                    case .error:
+                        error?.append(chunk.data)
+                    }
+                }
+            ),
+            timeout: timeout
+        )
+        .whenComplete(on: updateQueue) { result in
+            completion(result.map { response in
+                SSHCommandCapture(
+                    command: command,
+                    standardOutput: standard,
+                    errorOutput: error,
+                    status: response
+                )
+            })
+        }
     }
 
     // MARK: - Private

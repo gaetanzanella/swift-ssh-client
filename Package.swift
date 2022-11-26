@@ -7,7 +7,7 @@ let package = Package(
     name: "swift-ssh-client",
     platforms: [
         .iOS(.v13),
-        .macOS(.v10_15)
+        .macOS(.v10_15),
     ],
     products: [
         .library(

@@ -56,6 +56,15 @@ class IOSSHConnection {
         }
     }
 
+    func execute(_ command: SSHCommandInvocation,
+                 timeout: TimeInterval) -> Future<SSHCommandStatus> {
+        let promise = eventLoop.makePromise(of: SSHCommandStatus.self)
+        let session = SSHCommandSession(invocation: command, promise: promise)
+        return start(timeout: timeout).flatMap {
+            session.futureResult
+        }
+    }
+
     func start(_ session: SSHSession,
                timeout: TimeInterval) -> Future<Void> {
         let promise = eventLoop.makePromise(of: Void.self)
