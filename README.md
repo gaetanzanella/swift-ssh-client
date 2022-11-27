@@ -62,8 +62,7 @@ connection.requestSFTPClient(withTimeout: 3.0) { result in
 
 - SSH commands
 ```swift
-let command = "echo Hello".data(using: .utf8)!
-connection.execute(command) { result in
+connection.execute("echo Hello\n", withTimeout: 3.0) { result in
     switch result {
     case .success(let response):
         // Handle response
