@@ -38,7 +38,7 @@ platform :ios do
       # Release Github
 
       set_github_release(
-          repository_name: "faberNovel/swift-ssh-client",
+          repository_name: "gaetanzanella/swift-ssh-client",
           api_token: ENV["GITHUB_TOKEN"],
           name: "v#{target_version}",
           tag_name: "#{target_version}",
