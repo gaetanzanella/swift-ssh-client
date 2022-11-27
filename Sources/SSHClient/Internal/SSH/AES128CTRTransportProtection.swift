@@ -5,7 +5,7 @@ import Foundation
 import NIO
 import NIOSSH
 
-enum LegacyTransportProtectionError: Error {
+enum AES128CTRTransportProtectionError: Error {
     case invalidKeySize
     case invalidEncryptedPacketLength
     case invalidDecryptedPlaintextLength
@@ -19,7 +19,7 @@ enum LegacyTransportProtectionError: Error {
     case channelCreationFailed
 }
 
-final class LegacyTransportProtection: NIOSSHTransportProtection {
+final class AES128CTRTransportProtection: NIOSSHTransportProtection {
     static let macName: String? = "hmac-sha2-256"
     static let cipherBlockSize = 16
     static let cipherName = "aes128-ctr"
@@ -40,7 +40,7 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
             initialKeys.outboundEncryptionKey.bitCount == Self.keySizes.encryptionKeySize * 8,
             initialKeys.inboundEncryptionKey.bitCount == Self.keySizes.encryptionKeySize * 8
         else {
-            throw LegacyTransportProtectionError.invalidKeySize
+            throw AES128CTRTransportProtectionError.invalidKeySize
         }
 
         keys = initialKeys
@@ -67,7 +67,7 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
             initialKeys.initialOutboundIV,
             1
         ) == 1 else {
-            throw LegacyTransportProtectionError.cryptographicError
+            throw AES128CTRTransportProtectionError.cryptographicError
         }
 
         guard CCryptoBoringSSL_EVP_CipherInit(
@@ -77,7 +77,7 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
             initialKeys.initialInboundIV,
             0
         ) == 1 else {
-            throw LegacyTransportProtectionError.cryptographicError
+            throw AES128CTRTransportProtectionError.cryptographicError
         }
     }
 
@@ -90,7 +90,7 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
             newKeys.outboundEncryptionKey.bitCount == Self.keySizes.encryptionKeySize * 8,
             newKeys.inboundEncryptionKey.bitCount == Self.keySizes.encryptionKeySize * 8
         else {
-            throw LegacyTransportProtectionError.invalidKeySize
+            throw AES128CTRTransportProtectionError.invalidKeySize
         }
 
         keys = newKeys
@@ -114,7 +114,7 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
             newKeys.initialOutboundIV,
             1
         ) == 1 else {
-            throw LegacyTransportProtectionError.cryptographicError
+            throw AES128CTRTransportProtectionError.cryptographicError
         }
 
         guard CCryptoBoringSSL_EVP_CipherInit(
@@ -124,7 +124,7 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
             newKeys.initialInboundIV,
             0
         ) == 1 else {
-            throw LegacyTransportProtectionError.cryptographicError
+            throw AES128CTRTransportProtectionError.cryptographicError
         }
     }
 
@@ -132,7 +132,7 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
         // For us, decrypting the first block is very easy: do nothing. The length bytes are already
         // unencrypted!
         guard source.readableBytes >= 16 else {
-            throw LegacyTransportProtectionError.invalidKeySize
+            throw AES128CTRTransportProtectionError.invalidKeySize
         }
 
         try source.readWithUnsafeMutableReadableBytes { source in
@@ -146,7 +146,7 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
                 source.baseAddress!,
                 Self.cipherBlockSize
             ) == 1 else {
-                throw LegacyTransportProtectionError.cryptographicError
+                throw AES128CTRTransportProtectionError.cryptographicError
             }
 
             memcpy(source.baseAddress!, out, Self.cipherBlockSize)
@@ -164,7 +164,7 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
             ciphertext.count % Self.cipherBlockSize == 0
         else {
             // The only way this fails is if the payload doesn't match this encryption scheme.
-            throw LegacyTransportProtectionError.invalidEncryptedPacketLength
+            throw AES128CTRTransportProtectionError.invalidEncryptedPacketLength
         }
 
         if !ciphertext.isEmpty {
@@ -184,7 +184,7 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
                                 ciphertextPointer + count,
                                 Self.cipherBlockSize
                             ) == 1 else {
-                                throw LegacyTransportProtectionError.cryptographicError
+                                throw AES128CTRTransportProtectionError.cryptographicError
                             }
 
                             count += Self.cipherBlockSize
@@ -195,7 +195,7 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
 
             // All good! A quick soundness check to verify that the length of the plaintext is ok.
             guard plaintext.count % Self.cipherBlockSize == 0 else {
-                throw LegacyTransportProtectionError.invalidDecryptedPlaintextLength
+                throw AES128CTRTransportProtectionError.invalidDecryptedPlaintextLength
             }
         }
 
@@ -213,14 +213,14 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
         }
 
         if !test(sequenceNumber: sequenceNumber) {
-            throw LegacyTransportProtectionError.invalidMac
+            throw AES128CTRTransportProtectionError.invalidMac
         }
 
         plaintext.removeFirst(4)
         let paddingLength = Int(plaintext.removeFirst())
 
         guard paddingLength < plaintext.count else {
-            throw LegacyTransportProtectionError.invalidDecryptedPlaintextLength
+            throw AES128CTRTransportProtectionError.invalidDecryptedPlaintextLength
         }
 
         plaintext.removeLast(paddingLength)
@@ -257,7 +257,7 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
                         plaintextPointer + count,
                         Self.cipherBlockSize
                     ) == 1 else {
-                        throw LegacyTransportProtectionError.cryptographicError
+                        throw AES128CTRTransportProtectionError.cryptographicError
                     }
 
                     count += Self.cipherBlockSize
