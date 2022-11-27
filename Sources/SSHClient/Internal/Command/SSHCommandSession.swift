@@ -18,6 +18,10 @@ class SSHCommandSession: SSHSession {
         self.promise = promise
     }
 
+    deinit {
+        promise.fail(SSHConnectionError.unknown)
+    }
+
     // MARK: - SSHSession
 
     func start(in context: SSHSessionContext) {
@@ -49,6 +53,10 @@ private class SSHCommandHandler: ChannelDuplexHandler {
          promise: Promise<Void>) {
         self.invocation = invocation
         self.promise = promise
+    }
+
+    deinit {
+        promise.fail(SSHConnectionError.unknown)
     }
 
     func handlerAdded(context: ChannelHandlerContext) {

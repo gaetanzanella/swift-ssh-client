@@ -62,6 +62,20 @@ class SSHCommandTests: XCTestCase {
         wait(for: [exp], timeout: 3)
     }
 
+    func testConnectionShutDown() {
+        let connection = launchConnection()
+        let exp = XCTestExpectation()
+        connection.execute(
+            "echo Hello\n",
+            withTimeout: 1.0
+        ) { result in
+            XCTAssertTrue(result.isFailure)
+            exp.fulfill()
+        }
+        connection.cancel {}
+        wait(for: [exp], timeout: 3)
+    }
+
     // MARK: - Private
 
     private func launchConnection() -> SSHConnection {

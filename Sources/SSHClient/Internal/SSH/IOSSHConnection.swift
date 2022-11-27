@@ -63,9 +63,6 @@ class IOSSHConnection {
         return start(session, timeout: timeout).flatMap {
             session.futureResult
         }
-        .flatMap { _ in
-            session.futureResult
-        }
     }
 
     func start(_ session: SSHSession,
