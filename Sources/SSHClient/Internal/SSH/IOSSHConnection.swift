@@ -56,6 +56,19 @@ class IOSSHConnection {
         }
     }
 
+    func execute(_ command: SSHCommandInvocation,
+                 timeout: TimeInterval) -> Future<Void> {
+        let promise = eventLoop.makePromise(of: Void.self)
+        let session = SSHCommandSession(invocation: command, promise: promise)
+        return start(session, timeout: timeout).flatMap {
+            session.futureResult
+        }
+        .flatMap {
+            // TODO: Fix hack. We keep the session alive as long as the promise is running.
+            session.futureResult
+        }
+    }
+
     func start(_ session: SSHSession,
                timeout: TimeInterval) -> Future<Void> {
         let promise = eventLoop.makePromise(of: Void.self)
@@ -178,7 +191,6 @@ class IOSSHConnection {
                         session.start(
                             in: SSHSessionContext(
                                 channel: channel,
-                                sshHandler: handler,
                                 promise: createSession
                             )
                         )

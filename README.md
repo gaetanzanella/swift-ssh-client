@@ -4,7 +4,7 @@ This project provides high-level SSH client interfaces using [SwiftNIO SSH](http
 
 ## Requirements
 
-`Swift SSH Client` is compatible with iOS 13.0+ and macOS 11+.
+`Swift SSH Client` is compatible with iOS 13.0+ and macOS 10.5+.
 
 ## Getting started
 
@@ -39,7 +39,7 @@ As `SSH Client` means to be a high level interface, you do not directly interact
 Instead you use interfaces dedicated to your use case:
 
 - SSH shell
-```
+```swift
 connection.requestShell(withTimeout: 3.0) { result in
     switch result {
     case .success(let shell):
@@ -62,8 +62,7 @@ connection.requestSFTPClient(withTimeout: 3.0) { result in
 
 - SSH commands
 ```swift
-let command = "echo Hello".data(using: .utf8)!
-connection.execute(command) { result in
+connection.execute("echo Hello\n", withTimeout: 3.0) { result in
     switch result {
     case .success(let response):
         // Handle response

@@ -81,6 +81,10 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
         }
     }
 
+    var lengthEncrypted: Bool {
+        true
+    }
+
     func updateKeys(_ newKeys: NIOSSHSessionKeys) throws {
         guard
             newKeys.outboundEncryptionKey.bitCount == Self.keySizes.encryptionKeySize * 8,
@@ -224,59 +228,13 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
         return ByteBuffer(bytes: plaintext)
     }
 
-    func encryptPacket(_ packet: NIOSSH.NIOSSHEncryptablePayload,
-                       sequenceNumber: UInt32,
-                       to outboundBuffer: inout NIOCore.ByteBuffer) throws {
-        // Keep track of where the length is going to be written.
-        let packetLengthIndex = outboundBuffer.writerIndex
-        let packetLengthLength = MemoryLayout<UInt32>.size
-        let packetPaddingIndex = outboundBuffer.writerIndex + packetLengthLength
-        let packetPaddingLength = MemoryLayout<UInt8>.size
-
-        outboundBuffer.moveWriterIndex(forwardBy: packetLengthLength + packetPaddingLength)
-
-        // First, we write the packet.
-        let payloadBytes = outboundBuffer.writeEncryptablePayload(packet)
-
-        // Ok, now we need to pad. The rules for padding for AES GCM are:
-        //
-        // 1. We must pad out such that the total encrypted content (padding length byte,
-        //     plus content bytes, plus padding bytes) is a multiple of the block size.
-        // 2. At least 4 bytes of padding MUST be added.
-        // 3. This padding SHOULD be random.
-        //
-        // Note that, unlike other protection modes, the length is not encrypted, and so we
-        // must exclude it from the padding calculation.
-        //
-        // So we check how many bytes we've already written, use modular arithmetic to work out
-        // how many more bytes we need, and then if that's fewer than 4 we add a block size to it
-        // to fill it out.
-        let headerLength = packetLengthLength + packetPaddingLength
-        var encryptedBufferSize = headerLength + payloadBytes
-        let writtenBytes = headerLength + payloadBytes
-        var paddingLength = Self.cipherBlockSize - (writtenBytes % Self.cipherBlockSize)
-        if paddingLength < 4 {
-            paddingLength += Self.cipherBlockSize
-        }
-
-        if headerLength + payloadBytes + paddingLength < Self.cipherBlockSize {
-            paddingLength = Self.cipherBlockSize - headerLength - payloadBytes
-        }
-
-        // We now want to write that many padding bytes to the end of the buffer. These are supposed to be
-        // random bytes. We're going to get those from the system random number generator.
-        encryptedBufferSize += outboundBuffer.writeSSHPaddingBytes(count: paddingLength)
-        precondition(encryptedBufferSize % Self.cipherBlockSize == 0, "Incorrectly counted buffer size; got \(encryptedBufferSize)")
-
-        // We now know the length: it's going to be "encrypted buffer size". The length does not include the tag, so don't add it.
-        // Let's write that in. We also need to write the number of padding bytes in.
-        outboundBuffer.setInteger(UInt32(encryptedBufferSize - packetLengthLength), at: packetLengthIndex)
-        outboundBuffer.setInteger(UInt8(paddingLength), at: packetPaddingIndex)
-
-        // Ok, nice! Now we need to encrypt the data. We pass the length field as additional authenticated data, and the encrypted
-        // payload portion as the data to encrypt. We know these views will be valid, so we forcibly unwrap them: if they're invalid,
-        // our math was wrong and we cannot recover.
-        let plaintext = outboundBuffer.getBytes(at: packetLengthIndex, length: encryptedBufferSize)!
+    func encryptPacket(_ destination: inout ByteBuffer, sequenceNumber: UInt32) throws {
+        let packetLengthIndex = destination.readerIndex
+        let encryptedBufferSize = destination.readableBytes
+        let plaintext = destination.getBytes(
+            at: packetLengthIndex,
+            length: encryptedBufferSize
+        )!
         assert(plaintext.count % Self.cipherBlockSize == 0)
 
         var hmac = Crypto.HMAC<Crypto.SHA256>(key: keys.outboundMACKey)
@@ -308,10 +266,8 @@ final class LegacyTransportProtection: NIOSSHTransportProtection {
         }
 
         assert(ciphertext.count == plaintext.count)
-        // We now want to overwrite the portion of the bytebuffer that contains the plaintext with the ciphertext, and then append the
-        // tag.
-        outboundBuffer.setBytes(ciphertext, at: packetLengthIndex)
-        outboundBuffer.writeContiguousBytes(macHash)
+        destination.setBytes(ciphertext, at: packetLengthIndex)
+        destination.writeContiguousBytes(macHash)
     }
 
     deinit {

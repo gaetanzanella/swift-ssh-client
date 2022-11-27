@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       name:
-        description: "Version number"
+        description: "Version name"
         required: true
 
 jobs:
@@ -18,21 +18,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - uses: rickstaa/action-create-tag@v1
-        with:
-          tag: ${{ github.event.inputs.name }}
-          message: Release v${{ github.event.inputs.name }}
-          token: ${{ secrets.GZ_GITHUB_TOKEN }}
+      - name: Bundle install
+        working-directory: ./
+        run: bundle install
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
-        with:
-          tag_name: ${{ github.event.inputs.name }}
-          release_name: Release ${{ github.event.inputs.name }}
-          body: |
-            Changes in this release not available.
-          draft: false
-          prerelease: false
+          LC_ALL: en_US.UTF-8
+          LANG: en_US.UTF-8
+          GITHUB_TOKEN: ${{ secrets.GZ_GITHUB_TOKEN }}
+          COCOAPODS_TRUNK_TOKEN: TODO
+          GIT_COMMITTER_NAME: Gaetan Zanella
+          GIT_AUTHOR_NAME: Gaetan Zanella
+          GIT_COMMITTER_EMAIL: gaetan.zanella@fabernovel.com
+          GIT_AUTHOR_EMAIL: ci@fabernovel.com
+        run: bundle exec fastlane release version:${{ github.event.inputs.name }} bypass_confirmations:true

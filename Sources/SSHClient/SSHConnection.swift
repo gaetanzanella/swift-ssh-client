@@ -48,7 +48,7 @@ public class SSHConnection {
         setupIOConnection()
     }
 
-    // MARK: - Public
+    // MARK: - Connection
 
     public var stateUpdateHandler: ((State) -> Void)?
 
@@ -62,6 +62,8 @@ public class SSHConnection {
             completion()
         }
     }
+
+    // MARK: - Clients
 
     public func requestShell(withTimeout timeout: TimeInterval,
                              updateQueue: DispatchQueue = .main,
@@ -90,6 +92,48 @@ public class SSHConnection {
         ioConnection.start(sftpClient, timeout: timeout)
             .map { sftpClient }
             .whenComplete(on: updateQueue, completion)
+    }
+
+    // MARK: - Commands
+
+    public func execute(_ command: SSHCommand,
+                        withTimeout timeout: TimeInterval,
+                        completion: @escaping (Result<SSHCommandResponse, Error>) -> Void) {
+        var standard: Data?
+        var error: Data?
+        var status: SSHCommandStatus?
+        ioConnection.execute(
+            SSHCommandInvocation(
+                command: command,
+                onChunk: { chunk in
+                    switch chunk.channel {
+                    case .standard:
+                        if standard == nil {
+                            standard = Data()
+                        }
+                        standard?.append(chunk.data)
+                    case .error:
+                        if error == nil {
+                            error = Data()
+                        }
+                        error?.append(chunk.data)
+                    }
+                },
+                onStatus: { st in status = st }
+            ),
+            timeout: timeout
+        )
+        .whenComplete(on: updateQueue) { result in
+            completion(result.mapThrowing { _ in
+                guard let status = status else { throw SSHConnectionError.unknown }
+                return SSHCommandResponse(
+                    command: command,
+                    status: status,
+                    standardOutput: standard,
+                    errorOutput: error
+                )
+            })
+        }
     }
 
     // MARK: - Private
