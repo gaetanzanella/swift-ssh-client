@@ -70,8 +70,8 @@ public extension SSHAuthentication {
     }
 }
 
-extension SSHAuthentication {
-    public struct TransportProtection {
+public extension SSHAuthentication {
+    struct TransportProtection {
         public enum Scheme {
             case bundled
             case aes128CTR
