@@ -2,31 +2,12 @@ default_platform(:ios)
 
 platform :ios do
 
-    desc "SPM linting"
-    lane :spm_lint do
-      output = "Package.xcodeproj"
-      Dir.chdir("..") do
-          sh("swift package generate-xcodeproj --output #{output}")
-      end
-      xcodebuild(
-          project: output,
-          scheme: "#{ENV["SCHEME"]}-Package"
-      )
-      Dir.chdir("..") do
-          sh("rm Package.resolved")
-          sh("rm -rf Package.xcodeproj")
-      end
-    end
-
     desc "Release a new version"
     lane :release do |options|
       target_version = options[:version]
       raise "The version is missed. Use `fastlane release version:{version_number}`.`" if target_version.nil?
 
       ensure_git_branch(branch: "(release/*)|(hotfix/*)")
-      ensure_git_status_clean
-
-      spm_lint
 
       # TODO: Add cocoapods?
       # podspec = ENV["PODSPEC"]
@@ -57,7 +38,7 @@ platform :ios do
       # Release Github
 
       set_github_release(
-          repository_name: "faberNovel/swift-ssh-client",
+          repository_name: "gaetanzanella/swift-ssh-client",
           api_token: ENV["GITHUB_TOKEN"],
           name: "v#{target_version}",
           tag_name: "#{target_version}",
