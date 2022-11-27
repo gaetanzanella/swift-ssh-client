@@ -54,7 +54,7 @@ private class SSHCommandHandler: ChannelDuplexHandler {
     func handlerAdded(context: ChannelHandlerContext) {
         let execRequest = SSHChannelRequestEvent.ExecRequest(
             command: invocation.command.command,
-            wantReply: invocation.wantsReply
+            wantReply: true
         )
         context
             .channel
@@ -67,8 +67,13 @@ private class SSHCommandHandler: ChannelDuplexHandler {
             }
     }
 
-    func handlerRemoved(context: ChannelHandlerContext) {
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        context.channel.close(promise: nil)
         promise.fail(SSHConnectionError.unknown)
+    }
+
+    func handlerRemoved(context: ChannelHandlerContext) {
+        promise.succeed(())
     }
 
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
@@ -78,12 +83,11 @@ private class SSHCommandHandler: ChannelDuplexHandler {
         case let event as ChannelEvent:
             switch event {
             case .inputClosed:
-                promise.succeed(())
+                context.channel.close(promise: nil)
             case .outputClosed:
-                promise.fail(SSHConnectionError.unknown)
+                break
             }
         default:
-            print("✅", event)
             context.fireUserInboundEventTriggered(event)
         }
     }

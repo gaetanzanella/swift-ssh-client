@@ -20,7 +20,6 @@ protocol SSHServer {
 }
 
 extension SSHServer {
-
     var credentials: SSHAuthentication {
         .init(
             username: username,

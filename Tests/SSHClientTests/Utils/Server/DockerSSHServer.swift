@@ -2,16 +2,18 @@
 import Foundation
 
 class DockerSSHServer: SSHServer {
-
     var username: String {
         "username"
     }
+
     var password: String {
         "password"
     }
+
     var host: String {
         "localhost"
     }
+
     var port: UInt16 {
         2223
     }

@@ -98,56 +98,13 @@ public class SSHConnection {
 
     public func execute(_ command: SSHCommand,
                         withTimeout timeout: TimeInterval,
-                        completion: @escaping (Result<SSHCommandStatus, Error>) -> Void) {
-        var status: SSHCommandStatus?
-        ioConnection.execute(
-            SSHCommandInvocation(
-                command: command,
-                wantsReply: false,
-                onChunk: nil,
-                onStatus: { st in status = st }
-            ),
-            timeout: timeout
-        )
-        .whenComplete(on: updateQueue) { result in
-            completion(result.flatMap { _ in
-                Result(catching: {
-                    if let status = status {
-                        return status
-                    }
-                    throw SSHConnectionError.unknown
-                })
-            })
-        }
-    }
-
-    public func stream(_ command: SSHCommand,
-                       withTimeout timeout: TimeInterval,
-                       onChunk: @escaping (SSHCommandChunk) -> Void,
-                       onStatus: @escaping (SSHCommandStatus) -> Void,
-                       completion: @escaping (Result<Void, Error>) -> Void) {
-        ioConnection.execute(
-            SSHCommandInvocation(
-                command: command,
-                wantsReply: true,
-                onChunk: onChunk,
-                onStatus: onStatus
-            ),
-            timeout: timeout
-        )
-        .whenComplete(on: updateQueue, completion)
-    }
-
-    public func capture(_ command: SSHCommand,
-                        withTimeout timeout: TimeInterval,
-                        completion: @escaping (Result<SSHCommandCapture, Error>) -> Void) {
+                        completion: @escaping (Result<SSHCommandResponse, Error>) -> Void) {
         var standard: Data?
         var error: Data?
         var status: SSHCommandStatus?
         ioConnection.execute(
             SSHCommandInvocation(
                 command: command,
-                wantsReply: true,
                 onChunk: { chunk in
                     switch chunk.channel {
                     case .standard:
@@ -167,12 +124,13 @@ public class SSHConnection {
             timeout: timeout
         )
         .whenComplete(on: updateQueue) { result in
-            completion(result.map { _ in
-                SSHCommandCapture(
+            completion(result.mapThrowing { _ in
+                guard let status = status else { throw SSHConnectionError.unknown }
+                return SSHCommandResponse(
                     command: command,
+                    status: status,
                     standardOutput: standard,
-                    errorOutput: error,
-                    status: status
+                    errorOutput: error
                 )
             })
         }

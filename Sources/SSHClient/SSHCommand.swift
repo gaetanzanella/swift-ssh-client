@@ -23,11 +23,11 @@ public struct SSHCommand {
     }
 }
 
-public struct SSHCommandCapture {
+public struct SSHCommandResponse {
     public let command: SSHCommand
+    public let status: SSHCommandStatus
     public let standardOutput: Data?
     public let errorOutput: Data?
-    public let status: SSHCommandStatus?
 }
 
 extension SSHCommand: ExpressibleByStringLiteral {
