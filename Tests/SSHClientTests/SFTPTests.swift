@@ -495,7 +495,7 @@ class SFTPTests: XCTestCase {
     func testUnavailableSFTPConnectionError() throws {
         let newConnection = SSHConnection(
             host: connection.host,
-            port: connection.port + 1,
+            port: connection.port - 1,
             authentication: connection.authentication
         )
         let sshServerWithoutSFTP = IOSSHServer(

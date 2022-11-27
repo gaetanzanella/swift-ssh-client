@@ -7,7 +7,12 @@ class SSHConnectionTests: XCTestCase {
     var server: SSHServer!
 
     override func setUp() {
-        server = DockerSSHServer()
+        server = IOSSHServer(
+            expectedUsername: "user",
+            expectedPassword: "password",
+            host: "localhost",
+            port: 23
+        )
         try! server.run()
     }
 

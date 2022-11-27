@@ -63,6 +63,10 @@ class IOSSHConnection {
         return start(session, timeout: timeout).flatMap {
             session.futureResult
         }
+        .flatMap {
+            // TODO: Fix hack. We keep the session alive as long as the promise is running.
+            session.futureResult
+        }
     }
 
     func start(_ session: SSHSession,
