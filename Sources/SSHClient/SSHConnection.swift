@@ -76,7 +76,7 @@ public class SSHConnection {
         )
         ioConnection.start(shell, timeout: timeout)
             .map { shell }
-            .whenComplete(on: updateQueue, completion)
+            .whenComplete(on: self.updateQueue, completion)
     }
 
     public func requestSFTPClient(withTimeout timeout: TimeInterval,
@@ -91,7 +91,7 @@ public class SSHConnection {
         )
         ioConnection.start(sftpClient, timeout: timeout)
             .map { sftpClient }
-            .whenComplete(on: updateQueue, completion)
+            .whenComplete(on: self.updateQueue, completion)
     }
 
     // MARK: - Commands

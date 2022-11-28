@@ -33,10 +33,7 @@ connection.start(withTimeout: 3.0) { result in
 }
 ```
  
-Once connected, you can start executing concrete SSH operations. 
-As `SSH Client` means to be a high level interface, you do not directly interact with channels. 
-
-Instead you use interfaces dedicated to your use case:
+Once connected, you can start executing concrete SSH operations on child communication channels. As `SSH Client` means to be a high level interface, you do not directly interact with them. Instead you use interfaces dedicated to your use case.
 
 - SSH shell
 ```swift
@@ -85,6 +82,10 @@ connection.stateUpdateHandle = { state in
 ```
 
 As `SSHConnection` represents the overall SSH connection, if it ends, all the SSH operations or clients linked to it will end accordingly.
+
+## Beta version
+
+Consider the `0.1` version as a beta version. From patch to patch, the project API can change a lot. 
 
 ## License
 

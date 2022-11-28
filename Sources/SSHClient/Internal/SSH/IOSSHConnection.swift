@@ -116,7 +116,21 @@ class IOSSHConnection {
                 validation: authentication.hostKeyValidation
             )
         )
-        clientConfiguration.transportProtectionSchemes.append(LegacyTransportProtection.self)
+        clientConfiguration.transportProtectionSchemes = []
+        for scheme in authentication.transportProtection.schemes {
+            switch scheme {
+            case .aes128CTR:
+                clientConfiguration.transportProtectionSchemes.append(
+                    AES128CTRTransportProtection.self
+                )
+            case .bundled:
+                clientConfiguration.transportProtectionSchemes.append(
+                    contentsOf: Constants.bundledTransportProtectionSchemes
+                )
+            case .custom(let protection):
+                clientConfiguration.transportProtectionSchemes.append(protection)
+            }
+        }
         let bootstrap = ClientBootstrap(group: eventLoopGroup).channelInitializer { channel in
             channel.pipeline.addHandlers([
                 NIOSSHHandler(

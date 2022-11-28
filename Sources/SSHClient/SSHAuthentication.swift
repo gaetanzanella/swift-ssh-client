@@ -13,11 +13,15 @@ public struct SSHAuthentication {
     public let username: String
     public let method: Method
     public let hostKeyValidation: HostKeyValidation
+    public var transportProtection: TransportProtection
 
-    public init(username: String, method: Method, hostKeyValidation: HostKeyValidation) {
+    public init(username: String,
+                method: Method,
+                hostKeyValidation: HostKeyValidation) {
         self.username = username
         self.method = method
         self.hostKeyValidation = hostKeyValidation
+        transportProtection = TransportProtection()
     }
 }
 
@@ -62,6 +66,22 @@ public extension SSHAuthentication {
 
         public static func custom(_ delegate: NIOSSHClientServerAuthenticationDelegate) -> HostKeyValidation {
             .init(implementation: .custom(delegate))
+        }
+    }
+}
+
+public extension SSHAuthentication {
+    struct TransportProtection {
+        public enum Scheme {
+            case bundled
+            case aes128CTR
+            case custom(NIOSSHTransportProtection.Type)
+        }
+
+        public var schemes: [Scheme]
+
+        public init() {
+            schemes = [.bundled]
         }
     }
 }
