@@ -147,6 +147,16 @@ public class SSHConnection {
     }
 }
 
+import NIOTransportServices
+
 private extension MultiThreadedEventLoopGroup {
-    static let ssh = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+
+    static let ssh = {
+        // from https://github.com/swift-server/async-http-client/blob/main/Sources/AsyncHTTPClient/HTTPClient.swift#L110
+#if canImport(Network)
+        return NIOTSEventLoopGroup()
+#else
+        return MultiThreadedEventLoopGroup(numberOfThreads: 1)
+#endif
+    }()
 }
