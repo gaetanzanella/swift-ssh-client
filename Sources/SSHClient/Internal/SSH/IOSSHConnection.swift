@@ -135,6 +135,7 @@ class IOSSHConnection {
         let clientBootstrap: NIOClientTCPBootstrapProtocol
         #if canImport(Network)
         clientBootstrap = NIOTSConnectionBootstrap(group: eventLoopGroup)
+            .channelOption(NIOTSChannelOptions.waitForActivity, value: false)
         #else
         clientBootstrap = ClientBootstrap(group: eventLoopGroup)
         #endif

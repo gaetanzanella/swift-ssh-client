@@ -215,7 +215,9 @@ struct SFTPClientStateMachine {
                 return .callPromise(promise, .success(()))
             case .start(_, let promise):
                 return .callPromise(promise, .failure(SFTPError.invalidResponse))
-            case .inboundMessage, .messageSent, .messageFailed, .disconnected:
+            case .messageSent, .messageFailed:
+                break
+            case .inboundMessage, .disconnected:
                 assertionFailure("Unexpected state")
             }
             return .none
