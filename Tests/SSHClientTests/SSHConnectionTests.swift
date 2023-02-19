@@ -133,6 +133,7 @@ class SSHConnectionTests: XCTestCase {
         connection.ssh.start(withTimeout: 3.0) { result in
             connect1.fulfill()
             XCTAssertTrue(result.isFailure)
+            self.wait(timeout: 0.1)
             connect2.fulfill()
             XCTAssertFalse(self.server.hasActiveChild)
         }

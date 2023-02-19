@@ -2,6 +2,7 @@
 import Foundation
 import NIO
 import NIOSSH
+import NIOTransportServices
 
 class IOSSHConnection {
     let authentication: SSHAuthentication
@@ -131,7 +132,14 @@ class IOSSHConnection {
                 clientConfiguration.transportProtectionSchemes.append(protection)
             }
         }
-        let bootstrap = ClientBootstrap(group: eventLoopGroup).channelInitializer { channel in
+        let clientBootstrap: NIOClientTCPBootstrapProtocol
+        #if canImport(Network)
+        clientBootstrap = NIOTSConnectionBootstrap(group: eventLoopGroup)
+            .channelOption(NIOTSChannelOptions.waitForActivity, value: false)
+        #else
+        clientBootstrap = ClientBootstrap(group: eventLoopGroup)
+        #endif
+        let bootstrap = clientBootstrap.channelInitializer { channel in
             channel.pipeline.addHandlers([
                 NIOSSHHandler(
                     role: .client(clientConfiguration),

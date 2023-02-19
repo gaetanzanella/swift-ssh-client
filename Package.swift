@@ -18,6 +18,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio-ssh", from: "0.5.0"),
         .package(url: "https://github.com/apple/swift-crypto.git", "1.0.0" ..< "2.1.0"),
+        .package(url: "https://github.com/apple/swift-nio-transport-services.git", "1.0.0" ..< "2.1.0"),
     ],
     targets: [
         .target(
@@ -25,6 +26,7 @@ let package = Package(
             dependencies: [
                 .product(name: "NIOSSH", package: "swift-nio-ssh"),
                 .product(name: "_CryptoExtras", package: "swift-crypto"),
+                .product(name: "NIOTransportServices", package: "swift-nio-transport-services"),
             ]
         ),
         .testTarget(
