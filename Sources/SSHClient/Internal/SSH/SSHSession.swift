@@ -8,6 +8,6 @@ struct SSHSessionContext {
     let promise: Promise<Void>
 }
 
-protocol SSHSession {
+protocol SSHSession: SSHTask {
     func start(in context: SSHSessionContext)
 }

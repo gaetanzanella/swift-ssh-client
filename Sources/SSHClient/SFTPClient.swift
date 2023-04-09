@@ -42,6 +42,10 @@ public final class SFTPClient: SSHSession {
         sftpChannel.start(in: context)
     }
 
+    public func cancel() {
+        _ = sftpChannel.close()
+    }
+
     // MARK: - Public
 
     public var closeHandler: ((SFTPClientError?) -> Void)?

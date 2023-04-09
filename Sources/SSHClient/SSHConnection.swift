@@ -65,9 +65,10 @@ public class SSHConnection {
 
     // MARK: - Clients
 
+    @discardableResult
     public func requestShell(withTimeout timeout: TimeInterval,
                              updateQueue: DispatchQueue = .main,
-                             completion: @escaping (Result<SSHShell, Error>) -> Void) {
+                             completion: @escaping (Result<SSHShell, Error>) -> Void) -> SSHTask {
         let shell = SSHShell(
             ioShell: IOSSHShell(
                 eventLoop: MultiThreadedEventLoopGroup.ssh.any()
@@ -77,11 +78,13 @@ public class SSHConnection {
         ioConnection.start(shell, timeout: timeout)
             .map { shell }
             .whenComplete(on: self.updateQueue, completion)
+        return shell
     }
 
+    @discardableResult
     public func requestSFTPClient(withTimeout timeout: TimeInterval,
                                   updateQueue: DispatchQueue = .main,
-                                  completion: @escaping (Result<SFTPClient, Error>) -> Void) {
+                                  completion: @escaping (Result<SFTPClient, Error>) -> Void) -> SSHTask {
         let sftpClient = SFTPClient(
             sftpChannel: IOSFTPChannel(
                 idAllocator: MonotonicRequestIDAllocator(start: 0),
@@ -92,48 +95,51 @@ public class SSHConnection {
         ioConnection.start(sftpClient, timeout: timeout)
             .map { sftpClient }
             .whenComplete(on: self.updateQueue, completion)
+        return sftpClient
     }
 
     // MARK: - Commands
 
+    @discardableResult
     public func execute(_ command: SSHCommand,
                         withTimeout timeout: TimeInterval,
-                        completion: @escaping (Result<SSHCommandResponse, Error>) -> Void) {
+                        completion: @escaping (Result<SSHCommandResponse, Error>) -> Void) -> SSHTask {
         var standard: Data?
         var error: Data?
         var status: SSHCommandStatus?
-        ioConnection.execute(
-            SSHCommandInvocation(
-                command: command,
-                onChunk: { chunk in
-                    switch chunk.channel {
-                    case .standard:
-                        if standard == nil {
-                            standard = Data()
-                        }
-                        standard?.append(chunk.data)
-                    case .error:
-                        if error == nil {
-                            error = Data()
-                        }
-                        error?.append(chunk.data)
+        let invocation = SSHCommandInvocation(
+            command: command,
+            onChunk: { chunk in
+                switch chunk.channel {
+                case .standard:
+                    if standard == nil {
+                        standard = Data()
                     }
-                },
-                onStatus: { st in status = st }
-            ),
-            timeout: timeout
+                    standard?.append(chunk.data)
+                case .error:
+                    if error == nil {
+                        error = Data()
+                    }
+                    error?.append(chunk.data)
+                }
+            },
+            onStatus: { st in status = st }
         )
-        .whenComplete(on: updateQueue) { result in
-            completion(result.mapThrowing { _ in
-                guard let status = status else { throw SSHConnectionError.unknown }
-                return SSHCommandResponse(
-                    command: command,
-                    status: status,
-                    standardOutput: standard,
-                    errorOutput: error
-                )
-            })
-        }
+        let session = SSHCommandSession(invocation: invocation)
+        ioConnection
+            .start(session, timeout: timeout)
+            .whenComplete(on: updateQueue) { result in
+                completion(result.mapThrowing { _ in
+                    guard let status = status else { throw SSHConnectionError.unknown }
+                    return SSHCommandResponse(
+                        command: command,
+                        status: status,
+                        standardOutput: standard,
+                        errorOutput: error
+                    )
+                })
+            }
+        return session
     }
 
     // MARK: - Private

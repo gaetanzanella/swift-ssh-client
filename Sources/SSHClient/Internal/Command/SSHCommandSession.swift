@@ -4,37 +4,39 @@ import NIOSSH
 
 class SSHCommandSession: SSHSession {
     private let invocation: SSHCommandInvocation
-    private let promise: Promise<Void>
 
-    var futureResult: Future<Void> {
-        promise.futureResult
-    }
+    private weak var channel: Channel?
+    private var promise: Promise<Void>?
 
     // MARK: - Life Cycle
 
-    init(invocation: SSHCommandInvocation,
-         promise: Promise<Void>) {
+    init(invocation: SSHCommandInvocation) {
         self.invocation = invocation
-        self.promise = promise
     }
 
     deinit {
-        promise.fail(SSHConnectionError.unknown)
+        promise?.fail(SSHConnectionError.unknown)
     }
 
     // MARK: - SSHSession
 
     func start(in context: SSHSessionContext) {
+        self.channel = context.channel
+        self.promise = context.promise
         let channel = context.channel
         let result = channel.pipeline.addHandlers(
             [
                 SSHCommandHandler(
                     invocation: invocation,
-                    promise: promise
+                    promise: context.promise
                 ),
             ]
         )
         context.promise.completeWith(result)
+    }
+
+    func cancel() {
+        _ = channel?.close()
     }
 }
 

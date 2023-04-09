@@ -45,6 +45,10 @@ public class SSHShell: SSHSession {
         ioShell.start(in: context)
     }
 
+    public func cancel() {
+        _ = ioShell.close()
+    }
+
     // MARK: - Public
 
     public func write(_ data: Data, completion: @escaping (Result<Void, Error>) -> Void) {
