@@ -48,7 +48,7 @@ public class SSHConnection: @unchecked Sendable {
             eventLoopGroup: MultiThreadedEventLoopGroup.ssh
         )
         self.defaultTimeout = defaultTimeout
-        self.updateQueue = DispatchQueue(label: "ssh_connection")
+        updateQueue = DispatchQueue(label: "ssh_connection")
         setupIOConnection()
     }
 

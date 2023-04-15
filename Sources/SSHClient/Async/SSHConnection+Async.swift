@@ -1,32 +1,31 @@
 
 import Foundation
 
-extension SSHConnection {
+public extension SSHConnection {
+    typealias AsyncSSHCommandResponse = AsyncThrowingStream<SSHCommandResponseChunk, Error>
 
-    public typealias AsyncSSHCommandResponse = AsyncThrowingStream<SSHCommandResponseChunk, Error>
-
-    public func start(withTimeout timeout: TimeInterval? = nil) async throws {
+    func start(withTimeout timeout: TimeInterval? = nil) async throws {
         try await withCheckedResultContinuation { completion in
             start(withTimeout: timeout, completion: completion)
         }
     }
 
-    public func cancel() async {
-        return await withCheckedContinuation { continuation in
+    func cancel() async {
+        await withCheckedContinuation { continuation in
             cancel(completion: continuation.resume)
         }
     }
 
-    public func execute(_ command: SSHCommand,
-                        withTimeout timeout: TimeInterval? = nil) async throws -> SSHCommandResponse {
-        return try await withTaskCancellationHandler { completion in
+    func execute(_ command: SSHCommand,
+                 withTimeout timeout: TimeInterval? = nil) async throws -> SSHCommandResponse {
+        try await withTaskCancellationHandler { completion in
             execute(command, withTimeout: timeout, completion: completion)
         }
     }
 
-    public func stream(_ command: SSHCommand,
-                       withTimeout timeout: TimeInterval? = nil) async throws -> AsyncSSHCommandResponse {
-        return try await withTaskCancellationHandler { completion in
+    func stream(_ command: SSHCommand,
+                withTimeout timeout: TimeInterval? = nil) async throws -> AsyncSSHCommandResponse {
+        try await withTaskCancellationHandler { completion in
             enum State {
                 case initializing
                 case streaming(AsyncSSHCommandResponse.Continuation)
@@ -46,7 +45,7 @@ extension SSHConnection {
                         continuation.yield(responseChunk)
                     }
                     completion(.success(response))
-                case let .streaming(continuation):
+                case .streaming(let continuation):
                     continuation.yield(responseChunk)
                 }
             }
@@ -65,7 +64,7 @@ extension SSHConnection {
                     switch result {
                     case .success:
                         continuation.finish()
-                    case let .failure(error):
+                    case .failure(let error):
                         continuation.finish(throwing: error)
                     }
                 }

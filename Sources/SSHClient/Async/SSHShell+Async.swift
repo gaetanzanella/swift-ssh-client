@@ -7,12 +7,11 @@
 
 import Foundation
 
-extension SSHShell {
+public extension SSHShell {
+    typealias AsyncBytes = AsyncThrowingStream<Data, Error>
 
-    public typealias AsyncBytes = AsyncThrowingStream<Data, Error>
-
-    public var data: AsyncBytes {
-        return AsyncBytes { continuation in
+    var data: AsyncBytes {
+        AsyncBytes { continuation in
             let readID = addReadListener { continuation.yield($0) }
             let closeID = addCloseListener { error in
                 continuation.finish(throwing: error)
@@ -24,8 +23,8 @@ extension SSHShell {
         }
     }
 
-    public func close() async throws {
-        return try await withCheckedResultContinuation { completion in
+    func close() async throws {
+        try await withCheckedResultContinuation { completion in
             close(completion: completion)
         }
     }

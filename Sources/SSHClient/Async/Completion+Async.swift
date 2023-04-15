@@ -2,7 +2,7 @@
 import Foundation
 
 func withCheckedResultContinuation<T>(_ operation: (_ completion: @escaping (Result<T, Error>) -> Void) -> Void) async throws -> T {
-    return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, Error>) in
+    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, Error>) in
         operation { result in
             switch result {
             case .success(let success):
@@ -28,7 +28,6 @@ func withTaskCancellationHandler<T>(_ operation: (_ completion: @escaping (Resul
 
 // inspired by https://github.com/swift-server/async-http-client/blob/main/Sources/AsyncHTTPClient/AsyncAwait/HTTPClient%2Bexecute.swift#L155
 actor TaskAction {
-
     enum State {
         case initialized
         case task(SSHTask)
@@ -57,7 +56,7 @@ actor TaskAction {
         switch state {
         case .ended, .initialized:
             break
-        case let .task(task):
+        case .task(let task):
             task.cancel()
         }
     }

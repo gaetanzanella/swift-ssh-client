@@ -2,7 +2,6 @@
 import Foundation
 
 struct ObserverToken: Hashable {
-
     private enum Content: Hashable {
         case id(UUID)
         case publicAPI
@@ -11,7 +10,7 @@ struct ObserverToken: Hashable {
     private var content: Content
 
     init() {
-        self.content = .id(UUID())
+        content = .id(UUID())
     }
 
     private init(content: Content) {
@@ -24,7 +23,6 @@ struct ObserverToken: Hashable {
 }
 
 class BlockObserverHolder<Value> {
-
     typealias Observer = (Value) -> Void
 
     private var observers: [ObserverToken: Observer] = [:]
@@ -60,7 +58,6 @@ class BlockObserverHolder<Value> {
     func removeObserver(_ token: ObserverToken) {
         lock.withLock {
             observers.removeValue(forKey: token)
-            return
         }
     }
 }

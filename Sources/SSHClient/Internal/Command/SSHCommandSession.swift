@@ -22,7 +22,7 @@ class SSHCommandSession: SSHSession {
 
     func start(in context: SSHSessionContext) {
         self.channel = context.channel
-        self.promise = context.promise
+        promise = context.promise
         let channel = context.channel
         channel.pipeline.addHandlers(
             [
