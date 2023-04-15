@@ -7,7 +7,7 @@ typealias Future<T> = EventLoopFuture<T>
 typealias SFTPFileHandle = ByteBuffer
 typealias SFTPRequestID = UInt32
 
-public struct SFTPPathComponent {
+public struct SFTPPathComponent: Sendable {
     public let filename: String
     public let longname: String
     public let attributes: SFTPFileAttributes

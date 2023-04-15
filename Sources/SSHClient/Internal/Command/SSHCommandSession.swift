@@ -24,7 +24,7 @@ class SSHCommandSession: SSHSession {
         self.channel = context.channel
         self.promise = context.promise
         let channel = context.channel
-        let result = channel.pipeline.addHandlers(
+        channel.pipeline.addHandlers(
             [
                 SSHCommandHandler(
                     invocation: invocation,
@@ -32,7 +32,9 @@ class SSHCommandSession: SSHSession {
                 ),
             ]
         )
-        context.promise.completeWith(result)
+        .whenFailure { error in
+            context.promise.fail(error)
+        }
     }
 
     func cancel() {

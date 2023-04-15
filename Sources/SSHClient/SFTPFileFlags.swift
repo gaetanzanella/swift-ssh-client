@@ -1,6 +1,6 @@
 import Foundation
 
-public struct SFTPOpenFileFlags: OptionSet {
+public struct SFTPOpenFileFlags: Sendable, OptionSet {
     public var rawValue: UInt32
 
     public init(rawValue: UInt32) {
@@ -44,7 +44,7 @@ public struct SFTPOpenFileFlags: OptionSet {
     public static let forceCreate = SFTPOpenFileFlags(rawValue: 0x0000_0020)
 }
 
-public struct SFTPFileAttributes: CustomDebugStringConvertible {
+public struct SFTPFileAttributes: Sendable, CustomDebugStringConvertible {
     public typealias Permissions = UInt32
 
     public typealias ExtendedData = [(String, String)]
@@ -63,7 +63,7 @@ public struct SFTPFileAttributes: CustomDebugStringConvertible {
         public static let extended = Flags(rawValue: 0x8000_0000)
     }
 
-    public struct UserGroupId {
+    public struct UserGroupId: Sendable {
         public let userId: UInt32
         public let groupId: UInt32
 
@@ -76,7 +76,7 @@ public struct SFTPFileAttributes: CustomDebugStringConvertible {
         }
     }
 
-    public struct AccessModificationTime {
+    public struct AccessModificationTime: Sendable {
         // Both written as UInt32 seconds since jan 1 1970 as UTC
         public let accessTime: Date
         public let modificationTime: Date
