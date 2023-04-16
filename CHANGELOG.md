@@ -1,3 +1,10 @@
+## [0.1.2]
+
+### Added
+
+- Async support #12
+- `SFTPFilePath`
+
 ## [0.1.1]
 
 ### Updated
