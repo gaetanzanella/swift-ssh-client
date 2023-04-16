@@ -109,7 +109,7 @@ class SSHShellTests: XCTestCase {
         let exp = XCTestExpectation()
         var shell: EmbeddedShell?
         let connection = try launchConnection()
-        self.connection.requestShell(withTimeout: 15) { result in
+        connection.requestShell(withTimeout: 15) { result in
             switch result {
             case .success(let success):
                 shell = EmbeddedShell(shell: success)
