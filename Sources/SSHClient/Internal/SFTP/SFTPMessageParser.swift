@@ -60,7 +60,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
                 .init(
                     requestId: requestId,
                     payload: .init(
-                        filePath: filePath,
+                        filePath: SFTPFilePath(filePath),
                         pFlags: SFTPOpenFileFlags(rawValue: pFlags),
                         attributes: attributes
                     )
@@ -172,7 +172,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
             message = .stat(
                 .init(
                     requestId: requestId,
-                    path: path
+                    path: SFTPFilePath(path)
                 )
             )
         case .mkdir:
@@ -187,7 +187,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
                 .init(
                     requestId: requestId,
                     payload: .init(
-                        filePath: path,
+                        filePath: SFTPFilePath(path),
                         attributes: attributes
                     )
                 )
@@ -202,7 +202,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
             message = .rmdir(
                 .init(
                     requestId: requestId,
-                    filePath: path
+                    filePath: SFTPFilePath(path)
                 )
             )
         case .lstat:
@@ -215,7 +215,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
             message = .lstat(
                 .init(
                     requestId: requestId,
-                    path: path
+                    path: SFTPFilePath(path)
                 )
             )
         case .realpath:
@@ -228,7 +228,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
             message = .realpath(
                 .init(
                     requestId: requestId,
-                    path: path
+                    path: SFTPFilePath(path)
                 )
             )
         case .opendir:
@@ -241,7 +241,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
             message = .opendir(
                 .init(
                     requestId: requestId,
-                    path: handle
+                    path: SFTPFilePath(handle)
                 )
             )
         case .readdir:
@@ -288,7 +288,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
                 }
                 components.append(
                     .init(
-                        filename: filename,
+                        filename: SFTPFilePath(filename),
                         longname: longname,
                         attributes: attributes
                     )
@@ -323,7 +323,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
             message = .remove(
                 .init(
                     requestId: requestId,
-                    filename: filename
+                    filename: SFTPFilePath(filename)
                 )
             )
         case .setstat:
@@ -339,7 +339,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
                 .init(
                     requestId: requestId,
                     payload: .init(
-                        path: path,
+                        path: SFTPFilePath(path),
                         attributes: attributes
                     )
                 )
@@ -373,7 +373,7 @@ struct SFTPMessageParser: ByteToMessageDecoder {
             message = .readlink(
                 .init(
                     requestId: requestId,
-                    path: path
+                    path: SFTPFilePath(path)
                 )
             )
         case .symlink:
@@ -389,8 +389,8 @@ struct SFTPMessageParser: ByteToMessageDecoder {
                 .init(
                     requestId: requestId,
                     payload: .init(
-                        linkPath: linkPath,
-                        targetPath: targetPath
+                        linkPath: SFTPFilePath(linkPath),
+                        targetPath: SFTPFilePath(targetPath)
                     )
                 )
             )
@@ -406,8 +406,8 @@ struct SFTPMessageParser: ByteToMessageDecoder {
             message = .rename(.init(
                 requestId: requestId,
                 payload: .init(
-                    oldPath: oldPath,
-                    newPath: newPath
+                    oldPath: SFTPFilePath(oldPath),
+                    newPath: SFTPFilePath(newPath)
                 )
             ))
         case .extended, .extendedReply:

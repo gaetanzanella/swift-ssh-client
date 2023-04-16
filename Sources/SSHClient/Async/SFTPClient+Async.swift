@@ -30,12 +30,12 @@ public extension SFTPFile {
 }
 
 public extension SFTPClient {
-    func openFile(filePath: String,
+    func openFile(at filePath: SFTPFilePath,
                   flags: SFTPOpenFileFlags,
                   attributes: SFTPFileAttributes = .none) async throws -> SFTPFile {
         try await withCheckedResultContinuation { completion in
             openFile(
-                filePath: filePath,
+                at: filePath,
                 flags: flags,
                 attributes: attributes,
                 completion: completion
@@ -43,13 +43,13 @@ public extension SFTPClient {
         }
     }
 
-    func withFile(filePath: String,
+    func withFile(at filePath: SFTPFilePath,
                   flags: SFTPOpenFileFlags,
                   attributes: SFTPFileAttributes = .none,
                   _ closure: @escaping (SFTPFile) async -> Void) async throws {
         try await withCheckedResultContinuation { completion in
             withFile(
-                filePath: filePath,
+                at: filePath,
                 flags: flags,
                 attributes: attributes, { file, close in
                     Task {
@@ -62,41 +62,41 @@ public extension SFTPClient {
         }
     }
 
-    func listDirectory(atPath path: String) async throws -> [SFTPPathComponent] {
+    func listDirectory(at path: SFTPFilePath) async throws -> [SFTPPathComponent] {
         try await withCheckedResultContinuation { completion in
-            listDirectory(atPath: path, completion: completion)
+            listDirectory(at: path, completion: completion)
         }
     }
 
-    func getAttributes(at filePath: String) async throws -> SFTPFileAttributes {
+    func getAttributes(at filePath: SFTPFilePath) async throws -> SFTPFileAttributes {
         try await withCheckedResultContinuation { completion in
             getAttributes(at: filePath, completion: completion)
         }
     }
 
-    func createDirectory(atPath path: String,
+    func createDirectory(at path: SFTPFilePath,
                          attributes: SFTPFileAttributes = .none) async throws {
         try await withCheckedResultContinuation { completion in
-            createDirectory(atPath: path, attributes: attributes, completion: completion)
+            createDirectory(at: path, attributes: attributes, completion: completion)
         }
     }
 
-    func moveItem(atPath current: String,
-                  toPath destination: String) async throws {
+    func moveItem(at current: SFTPFilePath,
+                  to destination: SFTPFilePath) async throws {
         try await withCheckedResultContinuation { completion in
-            moveItem(atPath: current, toPath: destination, completion: completion)
+            moveItem(at: current, to: destination, completion: completion)
         }
     }
 
-    func removeDirectory(atPath path: String) async throws {
+    func removeDirectory(at path: SFTPFilePath) async throws {
         try await withCheckedResultContinuation { completion in
-            removeDirectory(atPath: path, completion: completion)
+            removeDirectory(at: path, completion: completion)
         }
     }
 
-    func removeFile(atPath path: String) async throws {
+    func removeFile(at path: SFTPFilePath) async throws {
         try await withCheckedResultContinuation { completion in
-            removeFile(atPath: path, completion: completion)
+            removeFile(at: path, completion: completion)
         }
     }
 

@@ -18,7 +18,7 @@ final class SFTPMessageSerializer: MessageToByteEncoder {
             }
         case .openFile(let openFile):
             out.writeInteger(openFile.requestId)
-            out.writeSSHString(openFile.payload.filePath)
+            out.writeSSHString(openFile.payload.filePath.encode())
             out.writeInteger(openFile.payload.pFlags.rawValue)
             out.writeSFTPFileAttributes(openFile.payload.attributes)
         case .closeFile(var closeFile):
@@ -47,34 +47,34 @@ final class SFTPMessageSerializer: MessageToByteEncoder {
             out.writeSSHString(&data.data)
         case .mkdir(let mkdir):
             out.writeInteger(mkdir.requestId)
-            out.writeSSHString(mkdir.payload.filePath)
+            out.writeSSHString(mkdir.payload.filePath.encode())
             out.writeSFTPFileAttributes(mkdir.payload.attributes)
         case .rmdir(let rmdir):
             out.writeInteger(rmdir.requestId)
-            out.writeSSHString(rmdir.filePath)
+            out.writeSSHString(rmdir.filePath.encode())
         case .stat(let stat):
             out.writeInteger(stat.requestId)
-            out.writeSSHString(stat.path)
+            out.writeSSHString(stat.path.encode())
         case .lstat(let lstat):
             out.writeInteger(lstat.requestId)
-            out.writeSSHString(lstat.path)
+            out.writeSSHString(lstat.path.encode())
         case .attributes(let fstat):
             out.writeInteger(fstat.requestId)
             out.writeSFTPFileAttributes(fstat.attributes)
         case .realpath(let realPath):
             out.writeInteger(realPath.requestId)
-            out.writeSSHString(realPath.path)
+            out.writeSSHString(realPath.path.encode())
         case .name(let name):
             out.writeInteger(name.requestId)
             out.writeInteger(name.count)
             for component in name.components {
-                out.writeSSHString(component.filename)
+                out.writeSSHString(component.filename.encode())
                 out.writeSSHString(component.longname)
                 out.writeSFTPFileAttributes(component.attributes)
             }
         case .opendir(let opendir):
             out.writeInteger(opendir.requestId)
-            out.writeSSHString(opendir.path)
+            out.writeSSHString(opendir.path.encode())
         case .readdir(var readdir):
             out.writeInteger(readdir.requestId)
             out.writeSSHString(&readdir.handle)
@@ -83,22 +83,22 @@ final class SFTPMessageSerializer: MessageToByteEncoder {
             out.writeSSHString(&fstat.handle)
         case .remove(let remove):
             out.writeInteger(remove.requestId)
-            out.writeSSHString(remove.filename)
+            out.writeSSHString(remove.filename.encode())
         case .fsetstat(var fsetstat):
             out.writeSSHString(&fsetstat.payload.handle)
             out.writeSFTPFileAttributes(fsetstat.payload.attributes)
         case .setstat(let setstat):
-            out.writeSSHString(setstat.payload.path)
+            out.writeSSHString(setstat.payload.path.encode())
             out.writeSFTPFileAttributes(setstat.payload.attributes)
         case .symlink(let symlink):
-            out.writeSSHString(symlink.payload.linkPath)
-            out.writeSSHString(symlink.payload.targetPath)
+            out.writeSSHString(symlink.payload.linkPath.encode())
+            out.writeSSHString(symlink.payload.targetPath.encode())
         case .readlink(let readlink):
-            out.writeSSHString(readlink.path)
+            out.writeSSHString(readlink.path.encode())
         case .rename(let rename):
             out.writeInteger(rename.requestId)
-            out.writeSSHString(rename.payload.oldPath)
-            out.writeSSHString(rename.payload.newPath)
+            out.writeSSHString(rename.payload.oldPath.encode())
+            out.writeSSHString(rename.payload.newPath.encode())
         }
         let length = out.writerIndex - lengthIndex - 4
         out.setInteger(UInt32(length), at: lengthIndex)

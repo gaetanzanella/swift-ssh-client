@@ -8,11 +8,11 @@ typealias SFTPFileHandle = ByteBuffer
 typealias SFTPRequestID = UInt32
 
 public struct SFTPPathComponent: Sendable {
-    public let filename: String
+    public let filename: SFTPFilePath
     public let longname: String
     public let attributes: SFTPFileAttributes
 
-    init(filename: String, longname: String, attributes: SFTPFileAttributes) {
+    init(filename: SFTPFilePath, longname: String, attributes: SFTPFileAttributes) {
         self.filename = filename
         self.longname = longname
         self.attributes = attributes
@@ -125,7 +125,7 @@ enum SFTPMessage {
     struct OpenFile {
         struct Payload {
             // Called `filename` in spec
-            var filePath: String
+            var filePath: SFTPFilePath
             var pFlags: SFTPOpenFileFlags
             var attributes: SFTPFileAttributes
         }
@@ -184,7 +184,7 @@ enum SFTPMessage {
 
     struct Remove {
         let requestId: SFTPRequestID
-        var filename: String
+        var filename: SFTPFilePath
     }
 
     struct FileSetStat {
@@ -199,7 +199,7 @@ enum SFTPMessage {
 
     struct SetStat {
         struct Payload {
-            var path: String
+            var path: SFTPFilePath
             var attributes: SFTPFileAttributes
         }
 
@@ -209,8 +209,8 @@ enum SFTPMessage {
 
     struct Symlink {
         struct Payload {
-            var linkPath: String
-            var targetPath: String
+            var linkPath: SFTPFilePath
+            var targetPath: SFTPFilePath
         }
 
         let requestId: SFTPRequestID
@@ -219,7 +219,7 @@ enum SFTPMessage {
 
     struct Readlink {
         let requestId: SFTPRequestID
-        var path: String
+        var path: SFTPFilePath
     }
 
     struct FileData {
@@ -229,7 +229,7 @@ enum SFTPMessage {
 
     struct MkDir {
         struct Payload {
-            let filePath: String
+            let filePath: SFTPFilePath
             let attributes: SFTPFileAttributes
         }
 
@@ -239,29 +239,29 @@ enum SFTPMessage {
 
     struct RmDir {
         let requestId: SFTPRequestID
-        var filePath: String
+        var filePath: SFTPFilePath
     }
 
     struct OpenDir {
         let requestId: SFTPRequestID
-        var path: String
+        var path: SFTPFilePath
     }
 
     struct Stat {
         static let id = SFTPMessageType.stat
 
         let requestId: SFTPRequestID
-        var path: String
+        var path: SFTPFilePath
     }
 
     struct LStat {
         let requestId: SFTPRequestID
-        var path: String
+        var path: SFTPFilePath
     }
 
     struct RealPath {
         let requestId: SFTPRequestID
-        var path: String
+        var path: SFTPFilePath
     }
 
     struct Name {
@@ -282,8 +282,8 @@ enum SFTPMessage {
 
     struct Rename {
         struct Payload {
-            let oldPath: String
-            let newPath: String
+            let oldPath: SFTPFilePath
+            let newPath: SFTPFilePath
         }
 
         let requestId: SFTPRequestID

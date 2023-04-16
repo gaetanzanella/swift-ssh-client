@@ -15,12 +15,12 @@ protocol SFTPChannel {
     func readFile(_ file: SFTPMessage.ReadFile.Payload) -> Future<SFTPMessage.ReadFile.Response>
     func writeFile(_ file: SFTPMessage.WriteFile.Payload) -> Future<SFTPMessage.Status>
     func mkdir(_ dir: SFTPMessage.MkDir.Payload) -> Future<SFTPMessage.Status>
-    func rmdir(path: String) -> Future<SFTPMessage.Status>
-    func rmFile(path: String) -> Future<SFTPMessage.Status>
+    func rmdir(path: SFTPFilePath) -> Future<SFTPMessage.Status>
+    func rmFile(path: SFTPFilePath) -> Future<SFTPMessage.Status>
     func readDir(_ handle: SFTPFileHandle) -> Future<SFTPMessage.ReadDir.Response>
-    func openDir(path: String) -> Future<SFTPMessage.Handle>
-    func realpath(path: String) -> Future<SFTPMessage.Name>
-    func stat(path: String) -> Future<SFTPMessage.Attributes>
+    func openDir(path: SFTPFilePath) -> Future<SFTPMessage.Handle>
+    func realpath(path: SFTPFilePath) -> Future<SFTPMessage.Name>
+    func stat(path: SFTPFilePath) -> Future<SFTPMessage.Attributes>
     func rename(_ payload: SFTPMessage.Rename.Payload) -> Future<SFTPMessage.Status>
 }
 
@@ -118,7 +118,7 @@ class IOSFTPChannel: SFTPChannel {
         }
     }
 
-    func rmdir(path: String) -> Future<SFTPMessage.Status> {
+    func rmdir(path: SFTPFilePath) -> Future<SFTPMessage.Status> {
         allocateRequestID().flatMap { id in
             self.send(.rmdir(.init(requestId: id, filePath: path)))
         }
@@ -127,7 +127,7 @@ class IOSFTPChannel: SFTPChannel {
         }
     }
 
-    func rmFile(path: String) -> Future<SFTPMessage.Status> {
+    func rmFile(path: SFTPFilePath) -> Future<SFTPMessage.Status> {
         allocateRequestID().flatMap { id in
             self.send(.remove(.init(requestId: id, filename: path)))
         }
@@ -157,7 +157,7 @@ class IOSFTPChannel: SFTPChannel {
         }
     }
 
-    func openDir(path: String) -> Future<SFTPMessage.Handle> {
+    func openDir(path: SFTPFilePath) -> Future<SFTPMessage.Handle> {
         allocateRequestID().flatMap { id in
             self.send(.opendir(.init(requestId: id, path: path)))
         }
@@ -171,7 +171,7 @@ class IOSFTPChannel: SFTPChannel {
         }
     }
 
-    func realpath(path: String) -> Future<SFTPMessage.Name> {
+    func realpath(path: SFTPFilePath) -> Future<SFTPMessage.Name> {
         allocateRequestID().flatMap { id in
             self.send(.realpath(.init(requestId: id, path: path)))
         }
@@ -185,7 +185,7 @@ class IOSFTPChannel: SFTPChannel {
         }
     }
 
-    func stat(path: String) -> Future<SFTPMessage.Attributes> {
+    func stat(path: SFTPFilePath) -> Future<SFTPMessage.Attributes> {
         allocateRequestID().flatMap { id in
             self.send(.stat(.init(requestId: id, path: path)))
         }
