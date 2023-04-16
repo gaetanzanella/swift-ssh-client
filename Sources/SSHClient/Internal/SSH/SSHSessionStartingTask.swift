@@ -78,8 +78,6 @@ struct SSHSessionStartingTaskStateMachine {
     private var state: State = .initialized
 
     mutating func handle(_ event: SSHSessionStartingTaskEvent) -> SSHSessionStartingTaskAction {
-        print("event \(event)")
-        print("state \(state)")
         switch state {
         case .initialized:
             switch event {
