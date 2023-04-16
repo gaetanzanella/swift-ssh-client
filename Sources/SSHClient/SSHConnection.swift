@@ -56,7 +56,7 @@ public class SSHConnection: @unchecked Sendable {
 
     public var stateUpdateHandler: ((State) -> Void)? {
         set {
-            stateUpdateListeners.update(newValue, token: .publicAPI())
+            stateUpdateListeners.add(newValue, for: .publicAPI())
         }
         get {
             stateUpdateListeners.observer(for: .publicAPI())
@@ -85,10 +85,14 @@ public class SSHConnection: @unchecked Sendable {
             ),
             updateQueue: updateQueue
         )
-        ioConnection.start(shell, timeout: timeout ?? defaultTimeout)
+        let task = SSHSessionStartingTask(
+            session: shell,
+            eventLoop: ioConnection.eventLoop
+        )
+        ioConnection.start(task, timeout: timeout ?? defaultTimeout)
             .map { shell }
             .whenComplete(on: updateQueue, completion)
-        return shell
+        return task
     }
 
     @discardableResult
@@ -101,10 +105,14 @@ public class SSHConnection: @unchecked Sendable {
             ),
             updateQueue: updateQueue
         )
-        ioConnection.start(sftpClient, timeout: timeout ?? defaultTimeout)
+        let task = SSHSessionStartingTask(
+            session: sftpClient,
+            eventLoop: ioConnection.eventLoop
+        )
+        ioConnection.start(task, timeout: timeout ?? defaultTimeout)
             .map { sftpClient }
             .whenComplete(on: updateQueue, completion)
-        return sftpClient
+        return task
     }
 
     // MARK: - Commands
@@ -128,11 +136,14 @@ public class SSHConnection: @unchecked Sendable {
                 }
             }
         )
-        let session = SSHCommandSession(invocation: invocation)
+        let task = SSHSessionStartingTask(
+            session: SSHCommandSession(invocation: invocation),
+            eventLoop: ioConnection.eventLoop
+        )
         ioConnection
-            .start(session, timeout: timeout ?? defaultTimeout)
+            .start(task, timeout: timeout ?? defaultTimeout)
             .whenComplete(on: updateQueue, completion)
-        return session
+        return task
     }
 
     @discardableResult

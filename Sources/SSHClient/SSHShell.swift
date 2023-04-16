@@ -41,7 +41,7 @@ public class SSHShell: @unchecked Sendable, SSHSession {
 
     public var readHandler: ((Data) -> Void)? {
         set {
-            readListeners.update(newValue, token: .publicAPI())
+            readListeners.add(newValue, for: .publicAPI())
         }
         get {
             readListeners.observer(for: .publicAPI())
@@ -50,7 +50,7 @@ public class SSHShell: @unchecked Sendable, SSHSession {
 
     public var closeHandler: ((SSHShellError?) -> Void)? {
         set {
-            closeListeners.update(newValue, token: .publicAPI())
+            closeListeners.add(newValue, for: .publicAPI())
         }
         get {
             closeListeners.observer(for: .publicAPI())
@@ -61,10 +61,6 @@ public class SSHShell: @unchecked Sendable, SSHSession {
 
     func start(in context: SSHSessionContext) {
         ioShell.start(in: context)
-    }
-
-    public func cancel() {
-        _ = ioShell.close()
     }
 
     // MARK: - Public

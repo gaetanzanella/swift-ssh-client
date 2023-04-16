@@ -5,7 +5,6 @@ import NIOSSH
 class SSHCommandSession: SSHSession {
     private let invocation: SSHCommandInvocation
 
-    private weak var channel: Channel?
     private var promise: Promise<Void>?
 
     // MARK: - Life Cycle
@@ -21,7 +20,6 @@ class SSHCommandSession: SSHSession {
     // MARK: - SSHSession
 
     func start(in context: SSHSessionContext) {
-        self.channel = context.channel
         promise = context.promise
         let channel = context.channel
         channel.pipeline.addHandlers(
@@ -35,10 +33,6 @@ class SSHCommandSession: SSHSession {
         .whenFailure { error in
             context.promise.fail(error)
         }
-    }
-
-    func cancel() {
-        _ = channel?.close()
     }
 }
 
@@ -82,6 +76,7 @@ private class SSHCommandHandler: ChannelDuplexHandler {
     func errorCaught(context: ChannelHandlerContext, error: Error) {
         context.channel.close(promise: nil)
         promise.fail(SSHConnectionError.unknown)
+        context.fireErrorCaught(error)
     }
 
     func handlerRemoved(context: ChannelHandlerContext) {
@@ -89,6 +84,9 @@ private class SSHCommandHandler: ChannelDuplexHandler {
     }
 
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+        defer {
+            context.fireUserInboundEventTriggered(event)
+        }
         switch event {
         case let event as SSHChannelRequestEvent.ExitStatus:
             invocation.onStatus?(SSHCommandStatus(exitStatus: event.exitStatus))
@@ -100,11 +98,14 @@ private class SSHCommandHandler: ChannelDuplexHandler {
                 break
             }
         default:
-            context.fireUserInboundEventTriggered(event)
+            break
         }
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        defer {
+            context.fireChannelRead(data)
+        }
         let channelData = unwrapInboundIn(data)
         guard case .byteBuffer(var bytes) = channelData.data,
               let data = bytes.readData(length: bytes.readableBytes)

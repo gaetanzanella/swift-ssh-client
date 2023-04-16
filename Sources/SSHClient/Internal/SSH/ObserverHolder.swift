@@ -38,9 +38,11 @@ class BlockObserverHolder<Value> {
         observers[token]
     }
 
-    func update(_ block: Observer?, token: ObserverToken) {
+    func add(_ block: Observer?, for token: ObserverToken) {
         if let block = block {
-            add(block)
+            lock.withLock {
+                observers[token] = block
+            }
         } else {
             removeObserver(token)
         }
@@ -49,14 +51,12 @@ class BlockObserverHolder<Value> {
     @discardableResult
     func add(_ block: @escaping Observer) -> ObserverToken {
         let token = ObserverToken()
-        lock.withLock {
-            observers[token] = block
-        }
+        add(block, for: token)
         return token
     }
 
     func removeObserver(_ token: ObserverToken) {
-        lock.withLock {
+        _ = lock.withLock {
             observers.removeValue(forKey: token)
         }
     }
