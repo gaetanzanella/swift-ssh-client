@@ -60,7 +60,7 @@ class SSHShellTests: XCTestCase {
             exp.fulfill()
         }
         task.cancel()
-        wait(for: [exp])
+        wait(for: [exp], timeout: 2)
     }
 
     func testShellDelayedCancellationShouldDoNothing() throws {
@@ -73,7 +73,7 @@ class SSHShellTests: XCTestCase {
             task?.cancel()
             exp.fulfill()
         }
-        wait(for: [exp])
+        wait(for: [exp], timeout: 2)
         wait(timeout: 0.5)
         XCTAssertEqual(shell!.states, [])
     }

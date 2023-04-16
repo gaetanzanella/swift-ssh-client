@@ -44,7 +44,7 @@ public extension SSHConnection {
             }
             let action = TaskAction()
             // Each callback are executed on the internal serial ssh connection queue.
-            // This is thread safe to modify the state inside then.
+            // This is thread safe to modify the state inside them.
             var state: State = .initializing
             let stream = { (responseChunk: SSHCommandResponseChunk) in
                 switch state {
