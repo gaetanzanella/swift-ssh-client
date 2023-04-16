@@ -51,7 +51,17 @@ for try await chunk in shell.data {
 - SFTP client
 ```swift
 let sftpClient = try await connection.requestSFTPClient()
-// sftp operations
+
+// directories
+try await sftpClient.createDirectory(at: "./new")
+try await sftpClient.removeDirectory(at: "./new")
+
+// files
+let file = try await client.openFile(at: "./new/file.txt", flags: .create)
+try await file.write("Hello World!".data(using: .utf8)!)
+try await file.close()
+
+// and more
 ``` 
 
 You keep track of the connection state, using the dedicated `stateUpdateHandler` property:
