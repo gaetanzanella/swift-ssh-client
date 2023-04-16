@@ -108,7 +108,7 @@ class SSHCommandTests: XCTestCase {
                 switch result {
                 case .success:
                     // 5000000 = successful output size
-                    XCTAssertTrue(standardOutput.count < 5000000)
+                    XCTAssertTrue(standardOutput.count < 5_000_000)
                     XCTAssertTrue(standardOutput.count > 100)
                 case .failure:
                     break

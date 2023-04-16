@@ -78,7 +78,6 @@ class SSHShellTests: XCTestCase {
         XCTAssertEqual(shell!.states, [])
     }
 
-
     // MARK: - Errors
 
     func testDisconnectionError() throws {
