@@ -23,6 +23,12 @@ public extension SSHShell {
         }
     }
 
+    func write(_ data: Data) async throws {
+        try await withCheckedResultContinuation { completion in
+            write(data, completion: completion)
+        }
+    }
+
     func close() async throws {
         try await withCheckedResultContinuation { completion in
             close(completion: completion)

@@ -30,8 +30,9 @@ class BlockObserverHolder<Value> {
 
     func call(with value: Value) {
         lock.withLock {
-            observers.forEach { $1(value) }
+            observers
         }
+        .forEach { $1(value) }
     }
 
     func observer(for token: ObserverToken) -> (Observer)? {

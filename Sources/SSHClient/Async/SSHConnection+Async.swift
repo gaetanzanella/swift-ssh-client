@@ -23,6 +23,18 @@ public extension SSHConnection {
         }
     }
 
+    func requestShell(withTimeout timeout: TimeInterval? = nil) async throws -> SSHShell {
+        try await withTaskCancellationHandler { completion in
+            requestShell(withTimeout: timeout, completion: completion)
+        }
+    }
+
+    func requestSFTPClient(withTimeout timeout: TimeInterval? = nil) async throws -> SFTPClient {
+        try await withTaskCancellationHandler { completion in
+            requestSFTPClient(withTimeout: timeout, completion: completion)
+        }
+    }
+
     func stream(_ command: SSHCommand,
                 withTimeout timeout: TimeInterval? = nil) async throws -> AsyncSSHCommandResponse {
         try await withTaskCancellationHandler { completion in

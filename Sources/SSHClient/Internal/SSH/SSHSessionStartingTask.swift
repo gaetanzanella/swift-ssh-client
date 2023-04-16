@@ -4,7 +4,6 @@ import NIOCore
 import NIOSSH
 
 class SSHSessionStartingTask: SSHTask {
-
     private var stateMachine = SSHSessionStartingTaskStateMachine()
 
     let session: SSHSession
@@ -68,7 +67,6 @@ enum SSHSessionStartingTaskAction {
 }
 
 struct SSHSessionStartingTaskStateMachine {
-
     enum State {
         case initialized
         case cancelled
@@ -76,7 +74,6 @@ struct SSHSessionStartingTaskStateMachine {
         case cancelling(Channel)
         case ended
     }
-
 
     private var state: State = .initialized
 

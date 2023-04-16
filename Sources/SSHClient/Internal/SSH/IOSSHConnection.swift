@@ -214,7 +214,7 @@ class IOSSHConnection {
                     }
                     .flatMapError { error in
                         // we close the created channel and spread the error
-                        return channel
+                        channel
                             .close()
                             .flatMapThrowing {
                                 throw error
