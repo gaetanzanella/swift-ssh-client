@@ -5,14 +5,14 @@ public final class SFTPFile: @unchecked Sendable {
     private var isActive: Bool
 
     private let handle: SFTPFileHandle
-    private let path: String
+    private let path: SFTPFilePath
     private let channel: SFTPChannel
     private let updateQueue: DispatchQueue
 
     // MARK: - Life Cycle
 
     init(channel: SFTPChannel,
-         path: String,
+         path: SFTPFilePath,
          handle: SFTPFileHandle,
          updateQueue: DispatchQueue) {
         isActive = true

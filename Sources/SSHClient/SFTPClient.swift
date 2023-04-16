@@ -46,7 +46,7 @@ public final class SFTPClient: @unchecked Sendable, SSHSession {
 
     public var closeHandler: ((SFTPClientError?) -> Void)?
 
-    public func listDirectory(atPath path: String,
+    public func listDirectory(at path: SFTPFilePath,
                               completion: @escaping ((Result<[SFTPPathComponent], Error>) -> Void)) {
         let newPath = recursivelyExecute(
             { path in
@@ -81,14 +81,14 @@ public final class SFTPClient: @unchecked Sendable, SSHSession {
         .whenComplete(on: updateQueue, completion)
     }
 
-    public func getAttributes(at filePath: String,
+    public func getAttributes(at filePath: SFTPFilePath,
                               completion: @escaping ((Result<SFTPFileAttributes, Error>) -> Void)) {
         sftpChannel.stat(path: filePath)
             .map { $0.attributes }
             .whenComplete(on: updateQueue, completion)
     }
 
-    public func openFile(filePath: String,
+    public func openFile(at filePath: SFTPFilePath,
                          flags: SFTPOpenFileFlags,
                          attributes: SFTPFileAttributes = .none,
                          updateQueue: DispatchQueue = .main,
@@ -110,13 +110,13 @@ public final class SFTPClient: @unchecked Sendable, SSHSession {
             .whenComplete(on: updateQueue, completion)
     }
 
-    public func withFile(filePath: String,
+    public func withFile(at filePath: SFTPFilePath,
                          flags: SFTPOpenFileFlags,
                          attributes: SFTPFileAttributes = .none,
                          _ closure: @escaping (SFTPFile, @escaping () -> Void) -> Void,
                          completion: @escaping (Result<Void, Error>) -> Void) {
         openFile(
-            filePath: filePath,
+            at: filePath,
             flags: flags,
             attributes: attributes,
             updateQueue: .global(qos: .utility)
@@ -132,7 +132,7 @@ public final class SFTPClient: @unchecked Sendable, SSHSession {
         }
     }
 
-    public func createDirectory(atPath path: String,
+    public func createDirectory(at path: SFTPFilePath,
                                 attributes: SFTPFileAttributes = .none,
                                 completion: @escaping ((Result<Void, Error>) -> Void)) {
         let message = SFTPMessage.MkDir.Payload(
@@ -144,8 +144,8 @@ public final class SFTPClient: @unchecked Sendable, SSHSession {
             .whenComplete(on: updateQueue, completion)
     }
 
-    public func moveItem(atPath current: String,
-                         toPath destination: String,
+    public func moveItem(at current: SFTPFilePath,
+                         to destination: SFTPFilePath,
                          completion: @escaping ((Result<Void, Error>) -> Void)) {
         let message = SFTPMessage.Rename.Payload(oldPath: current, newPath: destination)
         return sftpChannel.rename(message)
@@ -153,14 +153,14 @@ public final class SFTPClient: @unchecked Sendable, SSHSession {
             .whenComplete(on: updateQueue, completion)
     }
 
-    public func removeDirectory(atPath path: String,
+    public func removeDirectory(at path: SFTPFilePath,
                                 completion: @escaping ((Result<Void, Error>) -> Void)) {
         sftpChannel.rmdir(path: path)
             .mapAsVoid()
             .whenComplete(on: updateQueue, completion)
     }
 
-    public func removeFile(atPath path: String,
+    public func removeFile(at path: SFTPFilePath,
                            completion: @escaping ((Result<Void, Error>) -> Void)) {
         sftpChannel
             .rmFile(path: path)
