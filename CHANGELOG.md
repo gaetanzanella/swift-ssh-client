@@ -1,3 +1,9 @@
+## [0.1.3]
+
+## Fixed
+
+- Remove debug prints
+
 ## [0.1.2]
 
 ### Added
