@@ -76,6 +76,49 @@ class SSHCommandTests: XCTestCase {
         wait(for: [exp], timeout: 3)
     }
 
+    func testCommandImmediateCancellation() {
+        let connection = launchConnection()
+        let exp = XCTestExpectation()
+        let task = connection.execute("echo Hello\n") { result in
+            XCTAssertTrue(result.isFailure)
+            exp.fulfill()
+        }
+        task.cancel()
+        wait(for: [exp], timeout: 3)
+    }
+
+    func testCommandDelayedCancellation() {
+        let connection = launchConnection()
+        let exp = XCTestExpectation()
+        var standardOutput = Data()
+        var chunkCount = 0
+        var task: SSHTask?
+        task = connection.execute(
+            "yes \"long\" | head -n 1000000\n",
+            onChunk: { chunk in
+                standardOutput.append(chunk.data)
+                chunkCount += 1
+                if chunkCount == 5 {
+                    task?.cancel()
+                }
+            },
+            onStatus: { _ in },
+            completion: { result in
+                XCTAssertTrue(result.isSuccess)
+                switch result {
+                case .success:
+                    // 5000000 = successful output size
+                    XCTAssertTrue(standardOutput.count < 5000000)
+                    XCTAssertTrue(standardOutput.count > 100)
+                case .failure:
+                    break
+                }
+                exp.fulfill()
+            }
+        )
+        wait(for: [exp], timeout: 3)
+    }
+
     // MARK: - Private
 
     private func launchConnection() -> SSHConnection {
