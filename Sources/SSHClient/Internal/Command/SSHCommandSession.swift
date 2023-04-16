@@ -4,37 +4,35 @@ import NIOSSH
 
 class SSHCommandSession: SSHSession {
     private let invocation: SSHCommandInvocation
-    private let promise: Promise<Void>
 
-    var futureResult: Future<Void> {
-        promise.futureResult
-    }
+    private var promise: Promise<Void>?
 
     // MARK: - Life Cycle
 
-    init(invocation: SSHCommandInvocation,
-         promise: Promise<Void>) {
+    init(invocation: SSHCommandInvocation) {
         self.invocation = invocation
-        self.promise = promise
     }
 
     deinit {
-        promise.fail(SSHConnectionError.unknown)
+        promise?.fail(SSHConnectionError.unknown)
     }
 
     // MARK: - SSHSession
 
     func start(in context: SSHSessionContext) {
+        promise = context.promise
         let channel = context.channel
-        let result = channel.pipeline.addHandlers(
+        channel.pipeline.addHandlers(
             [
                 SSHCommandHandler(
                     invocation: invocation,
-                    promise: promise
+                    promise: context.promise
                 ),
             ]
         )
-        context.promise.completeWith(result)
+        .whenFailure { error in
+            context.promise.fail(error)
+        }
     }
 }
 
@@ -78,6 +76,7 @@ private class SSHCommandHandler: ChannelDuplexHandler {
     func errorCaught(context: ChannelHandlerContext, error: Error) {
         context.channel.close(promise: nil)
         promise.fail(SSHConnectionError.unknown)
+        context.fireErrorCaught(error)
     }
 
     func handlerRemoved(context: ChannelHandlerContext) {
@@ -85,6 +84,9 @@ private class SSHCommandHandler: ChannelDuplexHandler {
     }
 
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+        defer {
+            context.fireUserInboundEventTriggered(event)
+        }
         switch event {
         case let event as SSHChannelRequestEvent.ExitStatus:
             invocation.onStatus?(SSHCommandStatus(exitStatus: event.exitStatus))
@@ -96,11 +98,14 @@ private class SSHCommandHandler: ChannelDuplexHandler {
                 break
             }
         default:
-            context.fireUserInboundEventTriggered(event)
+            break
         }
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        defer {
+            context.fireChannelRead(data)
+        }
         let channelData = unwrapInboundIn(data)
         guard case .byteBuffer(var bytes) = channelData.data,
               let data = bytes.readData(length: bytes.readableBytes)

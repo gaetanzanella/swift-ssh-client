@@ -6,7 +6,7 @@ import NIOSSH
 enum SSHConnectionEvent {
     case requestDisconnection(Promise<Void>)
     case requestConnection(TimeInterval, Promise<Void>)
-    case requestSession(SSHSession, TimeInterval, Promise<Void>)
+    case requestSession(SSHSessionStartingTask, TimeInterval, Promise<Void>)
     case connected(Channel)
     case authenticated(Channel)
     case disconnected
@@ -15,7 +15,7 @@ enum SSHConnectionEvent {
 enum SSHConnectionAction {
     case none
     case disconnect(Channel)
-    case requestSession(Channel, SSHSession, TimeInterval, Promise<Void>)
+    case requestSession(Channel, SSHSessionStartingTask, TimeInterval, Promise<Void>)
     case connect(TimeInterval)
     case callPromise(Promise<Void>, Result<Void, SSHConnectionError>)
 }

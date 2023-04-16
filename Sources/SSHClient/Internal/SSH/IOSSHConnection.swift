@@ -12,7 +12,7 @@ class IOSSHConnection {
     private var stateMachine: SSHConnectionStateMachine
     private let eventLoopGroup: EventLoopGroup
 
-    private var eventLoop: EventLoop {
+    var eventLoop: EventLoop {
         eventLoopGroup.any()
     }
 
@@ -57,20 +57,7 @@ class IOSSHConnection {
         }
     }
 
-    func execute(_ command: SSHCommandInvocation,
-                 timeout: TimeInterval) -> Future<Void> {
-        let promise = eventLoop.makePromise(of: Void.self)
-        let session = SSHCommandSession(invocation: command, promise: promise)
-        return start(session, timeout: timeout).flatMap {
-            session.futureResult
-        }
-        .flatMap {
-            // TODO: Fix hack. We keep the session alive as long as the promise is running.
-            session.futureResult
-        }
-    }
-
-    func start(_ session: SSHSession,
+    func start(_ session: SSHSessionStartingTask,
                timeout: TimeInterval) -> Future<Void> {
         let promise = eventLoop.makePromise(of: Void.self)
         return eventLoop.submit {
@@ -79,6 +66,11 @@ class IOSSHConnection {
         .flatMap {
             promise.futureResult
         }
+        .map {
+            // TODO: Fix hack. We keep the session alive as long as the promise is running.
+            session
+        }
+        .mapAsVoid()
     }
 
     // MARK: - Private
@@ -100,7 +92,7 @@ class IOSSHConnection {
         case .disconnect(let channel):
             disconnect(channel: channel)
         case .requestSession(let channel, let session, let timeout, let promise):
-            startSession(channel: channel, session: session, timeout: timeout, promise: promise)
+            startSession(channel: channel, sessionTask: session, timeout: timeout, promise: promise)
         case .callPromise(let promise, let result):
             promise.end(result)
         case .none:
@@ -190,9 +182,10 @@ class IOSSHConnection {
     }
 
     private func startSession(channel: Channel,
-                              session: SSHSession,
+                              sessionTask: SSHSessionStartingTask,
                               timeout: TimeInterval,
                               promise: Promise<Void>) {
+        let session = sessionTask.session
         let createChannel = channel.eventLoop.makePromise(of: Channel.self)
         channel.eventLoop.scheduleTask(in: .seconds(Int64(timeout))) {
             createChannel.fail(SSHConnectionError.timeout)
@@ -205,6 +198,7 @@ class IOSSHConnection {
                 return createChannel
                     .futureResult
                     .flatMap { channel in
+                        sessionTask.didLaunchSession(channel)
                         let createSession = channel.eventLoop.makePromise(of: Void.self)
                         // TODO: We should only consider the remaining time, but that's ok
                         channel.eventLoop.scheduleTask(in: .seconds(Int64(timeout))) {
@@ -227,6 +221,9 @@ class IOSSHConnection {
                             }
                     }
             }
+        result.whenComplete { result in
+            sessionTask.didEnd(result)
+        }
         promise.completeWith(result)
     }
 }

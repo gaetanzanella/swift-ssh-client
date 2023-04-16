@@ -4,11 +4,11 @@ import Foundation
 import XCTest
 
 class SSHShellTests: XCTestCase {
-    var sftpServer: SFTPServer!
+    var sftpServer: SSHServer!
     var connection: SSHConnection!
 
     override func setUp() {
-        sftpServer = SFTPServer(configuration: .docker)
+        sftpServer = DockerSSHServer()
         connection = SSHConnection(
             host: sftpServer.host,
             port: sftpServer.port,
@@ -28,7 +28,6 @@ class SSHShellTests: XCTestCase {
         XCTAssertEqual(shell.state, .ready)
     }
 
-    // TODO: Fix test, this is a hack due to the sftp docker.
     func testCommand() throws {
         let shell = try launchShell()
         let exp = XCTestExpectation()
@@ -38,8 +37,7 @@ class SSHShellTests: XCTestCase {
         }
         wait(for: [exp], timeout: 2)
         wait(timeout: 2)
-        XCTAssertEqual(shell.states, [.failed(.unknown)])
-        XCTAssertEqual(shell.data[0], "This service allows sftp connections only.\n".data(using: .utf8))
+        XCTAssertEqual(shell.data[0], "/config\n".data(using: .utf8))
     }
 
     func testClosing() throws {
@@ -52,6 +50,32 @@ class SSHShellTests: XCTestCase {
         wait(for: [exp], timeout: 2)
         XCTAssertEqual(shell.states, [.closed])
         XCTAssertEqual(shell.state, .closed)
+    }
+
+    func testShellImmediateCancellation() throws {
+        let connection = try launchConnection()
+        let exp = XCTestExpectation()
+        let task = connection.requestShell { result in
+            XCTAssert(result.isFailure)
+            exp.fulfill()
+        }
+        task.cancel()
+        wait(for: [exp], timeout: 2)
+    }
+
+    func testShellDelayedCancellationShouldDoNothing() throws {
+        let connection = try launchConnection()
+        let exp = XCTestExpectation()
+        var task: SSHTask?
+        var shell: EmbeddedShell?
+        task = connection.requestShell { result in
+            shell = (try? result.get()).flatMap { EmbeddedShell(shell: $0) }
+            task?.cancel()
+            exp.fulfill()
+        }
+        wait(for: [exp], timeout: 2)
+        wait(timeout: 0.5)
+        XCTAssertEqual(shell!.states, [])
     }
 
     // MARK: - Errors
@@ -84,21 +108,15 @@ class SSHShellTests: XCTestCase {
     private func launchShell() throws -> EmbeddedShell {
         let exp = XCTestExpectation()
         var shell: EmbeddedShell?
-        connection.start(withTimeout: 2) { result in
+        let connection = try launchConnection()
+        connection.requestShell(withTimeout: 15) { result in
             switch result {
-            case .success:
-                self.connection.requestShell(withTimeout: 15) { result in
-                    switch result {
-                    case .success(let success):
-                        shell = EmbeddedShell(shell: success)
-                    case .failure:
-                        break
-                    }
-                    exp.fulfill()
-                }
+            case .success(let success):
+                shell = EmbeddedShell(shell: success)
             case .failure:
-                exp.fulfill()
+                break
             }
+            exp.fulfill()
         }
         wait(for: [exp], timeout: 3)
         if let shell = shell {
@@ -106,6 +124,16 @@ class SSHShellTests: XCTestCase {
         }
         struct AError: Error {}
         throw AError()
+    }
+
+    private func launchConnection() throws -> SSHConnection {
+        let exp = XCTestExpectation()
+        connection.start(withTimeout: 2) { result in
+            XCTAssertTrue(result.isSuccess)
+            exp.fulfill()
+        }
+        wait(for: [exp], timeout: 2)
+        return connection
     }
 }
 

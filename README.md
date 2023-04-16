@@ -23,50 +23,29 @@ let connection = SSHConnection(
     )
 )
 
-connection.start(withTimeout: 3.0) { result in
-    switch result {
-    case .success:
-        // Handle connection
-    case .failure:
-        // Handle failure
-    }
-}
+try await connection.start()
 ```
  
 Once connected, you can start executing concrete SSH operations on child communication channels. As `SSH Client` means to be a high level interface, you do not directly interact with them. Instead you use interfaces dedicated to your use case.
 
 - SSH shell
 ```swift
-connection.requestShell(withTimeout: 3.0) { result in
-    switch result {
-    case .success(let shell):
-        // Start shell operations
-    ...
-    }
+let shell = try await connection.requestShell()
+for try await chunk in shell.data {
+    // ...
 }
 ```
 
 - SFTP client
 ```swift
-connection.requestSFTPClient(withTimeout: 3.0) { result in
-    switch result {
-    case .success(let client):
-        // Start sftp operations
-    ...
-    }
-}
+let sftpClient = try await connection.requestSFTPClient()
+// sftp operations
 ``` 
 
 - SSH commands
 ```swift
-connection.execute("echo Hello\n", withTimeout: 3.0) { result in
-    switch result {
-    case .success(let response):
-        // Handle response
-    case .failure:
-        // Handle failure
-    }
-}
+let response = try await connection.execute("echo Hello\n")
+// Handle response
 ```
 
 You keep track of the connection state, using the dedicated `stateUpdateHandler` property:

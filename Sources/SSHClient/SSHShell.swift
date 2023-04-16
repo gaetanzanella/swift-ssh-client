@@ -7,7 +7,7 @@ public enum SSHShellError: Error {
     case unknown
 }
 
-public class SSHShell: SSHSession {
+public class SSHShell: @unchecked Sendable, SSHSession {
     enum State: Equatable {
         case idle
         case ready
@@ -17,6 +17,9 @@ public class SSHShell: SSHSession {
 
     private let ioShell: IOSSHShell
     private let updateQueue: DispatchQueue
+
+    private var readListeners = BlockObserverHolder<Data>()
+    private var closeListeners = BlockObserverHolder<SSHShellError?>()
 
     // For testing purpose.
     // We expose a simple `closeHandler` instead of the state as the starting is
@@ -36,8 +39,23 @@ public class SSHShell: SSHSession {
         setupIOShell()
     }
 
-    public var readHandler: ((Data) -> Void)?
-    public var closeHandler: ((SSHShellError?) -> Void)?
+    public var readHandler: ((Data) -> Void)? {
+        set {
+            readListeners.add(newValue, for: .publicAPI())
+        }
+        get {
+            readListeners.observer(for: .publicAPI())
+        }
+    }
+
+    public var closeHandler: ((SSHShellError?) -> Void)? {
+        set {
+            closeListeners.add(newValue, for: .publicAPI())
+        }
+        get {
+            closeListeners.observer(for: .publicAPI())
+        }
+    }
 
     // MARK: - SSHSession
 
@@ -55,12 +73,30 @@ public class SSHShell: SSHSession {
         ioShell.close().whenComplete(on: updateQueue, completion)
     }
 
+    // MARK: - Internal
+
+    func addReadListener(_ block: @escaping (Data) -> Void) -> ObserverToken {
+        readListeners.add(block)
+    }
+
+    func removeReadListener(_ uuid: ObserverToken) {
+        readListeners.removeObserver(uuid)
+    }
+
+    func addCloseListener(_ block: @escaping (SSHShellError?) -> Void) -> ObserverToken {
+        closeListeners.add(block)
+    }
+
+    func removeCloseListener(_ uuid: ObserverToken) {
+        closeListeners.removeObserver(uuid)
+    }
+
     // MARK: - Private
 
     private func setupIOShell() {
         ioShell.readHandler = { [weak self] data in
             self?.updateQueue.async {
-                self?.readHandler?(data)
+                self?.readListeners.call(with: data)
             }
         }
         ioShell.stateUpdateHandler = { [weak self] state in
@@ -72,9 +108,9 @@ public class SSHShell: SSHSession {
                 case .ready:
                     break
                 case .closed:
-                    self?.closeHandler?(nil)
+                    self?.closeListeners.call(with: nil)
                 case .failed(let error):
-                    self?.closeHandler?(error)
+                    self?.closeListeners.call(with: error)
                 }
             }
         }

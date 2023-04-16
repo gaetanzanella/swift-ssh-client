@@ -7,8 +7,8 @@ public enum SFTPClientError: Error {
     case unknown
 }
 
-public final class SFTPClient: SSHSession {
-    enum State: Equatable {
+public final class SFTPClient: @unchecked Sendable, SSHSession {
+    enum State: Sendable, Equatable {
         case idle
         case ready
         case closed

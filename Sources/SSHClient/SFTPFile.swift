@@ -1,7 +1,7 @@
 import Foundation
 import NIO
 
-public final class SFTPFile {
+public final class SFTPFile: @unchecked Sendable {
     private var isActive: Bool
 
     private let handle: SFTPFileHandle

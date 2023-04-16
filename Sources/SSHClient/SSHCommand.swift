@@ -1,12 +1,17 @@
 
 import Foundation
 
-public struct SSHCommandStatus {
+public struct SSHCommandStatus: Sendable {
     public let exitStatus: Int
 }
 
-public struct SSHCommandChunk {
-    public enum Channel {
+public enum SSHCommandResponseChunk: Sendable {
+    case chunk(SSHCommandChunk)
+    case status(SSHCommandStatus)
+}
+
+public struct SSHCommandChunk: Sendable {
+    public enum Channel: Sendable {
         case standard
         case error
     }
@@ -15,7 +20,7 @@ public struct SSHCommandChunk {
     public let data: Data
 }
 
-public struct SSHCommand {
+public struct SSHCommand: Sendable {
     public let command: String
 
     public init(_ command: String) {
@@ -23,7 +28,7 @@ public struct SSHCommand {
     }
 }
 
-public struct SSHCommandResponse {
+public struct SSHCommandResponse: Sendable {
     public let command: SSHCommand
     public let status: SSHCommandStatus
     public let standardOutput: Data?
