@@ -40,6 +40,7 @@ public class SSHConnection: @unchecked Sendable {
     public init(host: String,
                 port: UInt16,
                 authentication: SSHAuthentication,
+                queue: DispatchQueue? = nil,
                 defaultTimeout: TimeInterval = 15.0) {
         ioConnection = IOSSHConnection(
             host: host,
@@ -47,8 +48,8 @@ public class SSHConnection: @unchecked Sendable {
             authentication: authentication,
             eventLoopGroup: MultiThreadedEventLoopGroup.ssh
         )
+        updateQueue = queue ?? DispatchQueue(label: "ssh_connection_queue")
         self.defaultTimeout = defaultTimeout
-        updateQueue = DispatchQueue(label: "ssh_connection")
         setupIOConnection()
     }
 
@@ -78,12 +79,13 @@ public class SSHConnection: @unchecked Sendable {
 
     @discardableResult
     public func requestShell(withTimeout timeout: TimeInterval? = nil,
+                             queue: DispatchQueue? = nil,
                              completion: @escaping (Result<SSHShell, Error>) -> Void) -> SSHTask {
         let shell = SSHShell(
             ioShell: IOSSHShell(
                 eventLoop: MultiThreadedEventLoopGroup.ssh.any()
             ),
-            updateQueue: updateQueue
+            updateQueue: queue ?? updateQueue
         )
         let task = SSHSessionStartingTask(
             session: shell,
@@ -97,13 +99,14 @@ public class SSHConnection: @unchecked Sendable {
 
     @discardableResult
     public func requestSFTPClient(withTimeout timeout: TimeInterval? = nil,
+                                  queue: DispatchQueue? = nil,
                                   completion: @escaping (Result<SFTPClient, Error>) -> Void) -> SSHTask {
         let sftpClient = SFTPClient(
             sftpChannel: IOSFTPChannel(
                 idAllocator: MonotonicRequestIDAllocator(start: 0),
                 eventLoop: MultiThreadedEventLoopGroup.ssh.any()
             ),
-            updateQueue: updateQueue
+            updateQueue: queue ?? updateQueue
         )
         let task = SSHSessionStartingTask(
             session: sftpClient,
