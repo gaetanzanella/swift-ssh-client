@@ -1,3 +1,9 @@
+## [0.1.4]
+
+## Added
+
+- Queue configuration public API
+
 ## [0.1.3]
 
 ## Fixed
