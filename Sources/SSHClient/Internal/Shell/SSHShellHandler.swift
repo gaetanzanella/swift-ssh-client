@@ -24,8 +24,11 @@ class StartShellHandler: ChannelInboundHandler {
     func handlerAdded(context: ChannelHandlerContext) {
         _ = context
             .channel
-            .setOption(ChannelOptions.allowRemoteHalfClosure, value: true)
-            .flatMap {
+            .eventLoop
+            // TODO: (gz): Move option to bootstrapper
+            // https://forums.swift.org/t/unit-testing-channeloptions/51797
+            // .setOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+            .flatSubmit {
                 let promise = context.channel.eventLoop.makePromise(of: Void.self)
                 let request = SSHChannelRequestEvent.ShellRequest(wantReply: true)
                 context.triggerUserOutboundEvent(
@@ -38,7 +41,7 @@ class StartShellHandler: ChannelInboundHandler {
                 // we close the channel in case of error
                 context
                     .channel
-                    .closeFuture
+                    .close()
             }
     }
 
