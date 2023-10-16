@@ -117,3 +117,5 @@ class IOSSHShell {
         }
     }
 }
+
+extension IOSSHShell: SSHSession {}

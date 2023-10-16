@@ -1,13 +1,32 @@
 
 import Foundation
-import XCTest
 import NIOCore
 import NIOEmbedded
 import NIOSSH
 @testable import SSHClient
+import XCTest
+
+struct SSHSessionHarness {
+    let channel = EmbeddedSSHChannel()
+
+    func start<S: SSHSession>(_ session: S) throws -> Future<Void> {
+        let promise = channel.loop.makePromise(of: Void.self)
+        try channel.connect().wait()
+        let context = SSHSessionContext(
+            channel: channel.channel,
+            promise: promise
+        )
+        try channel.startMonitoringOutbound()
+        session.start(in: context)
+        return promise.futureResult
+    }
+
+    func run() {
+        channel.run()
+    }
+}
 
 class EmbeddedSSHChannel {
-
     var channel: Channel {
         embeddedChannel
     }
@@ -30,6 +49,11 @@ class EmbeddedSSHChannel {
     var shouldFailOnOutboundEvent: Bool {
         set { recorder.shouldFailOnOutboundEvent = newValue }
         get { recorder.shouldFailOnOutboundEvent }
+    }
+
+    func fireErrorCaught() {
+        struct AnError: Error {}
+        embeddedChannel.pipeline.fireErrorCaught(AnError())
     }
 
     func triggerInbound(_ event: Any) {
@@ -57,7 +81,7 @@ class EmbeddedSSHChannel {
     }
 
     func readOutbound() throws -> SSHChannelData? {
-        return try embeddedChannel.readOutbound(as: SSHChannelData.self)
+        try embeddedChannel.readOutbound(as: SSHChannelData.self)
     }
 
     func readAllOutbound() throws -> [SSHChannelData] {
@@ -69,11 +93,11 @@ class EmbeddedSSHChannel {
     }
 
     func connect() -> Future<Void> {
-        return channel.connect(to: try! .init(unixDomainSocketPath: "/fake"))
+        channel.connect(to: try! .init(unixDomainSocketPath: "/fake"))
     }
 
     func close() -> Future<Void> {
-        return channel.close()
+        channel.close()
     }
 
     func run() {

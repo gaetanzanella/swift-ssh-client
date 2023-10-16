@@ -45,16 +45,14 @@ private class SSHCommandHandler: ChannelDuplexHandler {
     private let invocation: SSHCommandInvocation
     private let promise: Promise<Void>
 
+    private var isSuccess = false
+
     // MARK: - Life Cycle
 
     init(invocation: SSHCommandInvocation,
          promise: Promise<Void>) {
         self.invocation = invocation
         self.promise = promise
-    }
-
-    deinit {
-        promise.fail(SSHConnectionError.unknown)
     }
 
     func handlerAdded(context: ChannelHandlerContext) {
@@ -64,23 +62,27 @@ private class SSHCommandHandler: ChannelDuplexHandler {
         )
         context
             .channel
-            .setOption(ChannelOptions.allowRemoteHalfClosure, value: true)
-            .flatMap {
+//            .setOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+            .eventLoop.flatSubmit {
                 context.triggerUserOutboundEvent(execRequest)
             }
             .whenFailure { _ in
-                context.close(promise: nil)
+                context.channel.close(promise: nil)
             }
     }
 
     func errorCaught(context: ChannelHandlerContext, error: Error) {
         context.channel.close(promise: nil)
-        promise.fail(SSHConnectionError.unknown)
         context.fireErrorCaught(error)
     }
 
-    func handlerRemoved(context: ChannelHandlerContext) {
-        promise.succeed(())
+    func channelInactive(context: ChannelHandlerContext) {
+        if isSuccess {
+            promise.succeed(())
+        } else {
+            promise.fail(SSHShellError.unknown)
+        }
+        context.fireChannelInactive()
     }
 
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
@@ -93,6 +95,7 @@ private class SSHCommandHandler: ChannelDuplexHandler {
         case let event as ChannelEvent:
             switch event {
             case .inputClosed:
+                isSuccess = true
                 context.channel.close(promise: nil)
             case .outputClosed:
                 break
@@ -115,7 +118,6 @@ private class SSHCommandHandler: ChannelDuplexHandler {
         switch channelData.type {
         case .channel:
             invocation.onChunk?(.init(channel: .standard, data: data))
-            return
         case .stdErr:
             invocation.onChunk?(.init(channel: .error, data: data))
         default:

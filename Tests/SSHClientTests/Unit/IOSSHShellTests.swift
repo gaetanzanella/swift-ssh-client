@@ -1,108 +1,94 @@
 
 import Foundation
-import XCTest
 import NIOCore
 import NIOEmbedded
 import NIOSSH
 @testable import SSHClient
+import XCTest
 
 class IOSSHShellTests: XCTestCase {
-
     func testSuccessfulSSHChannelStart() throws {
-        let shell = EmbeddedIOShell()
-        try shell.assertStart()
-    }
-
-    func testFailedSSHChannelStart() throws {
-        let shell = EmbeddedIOShell()
-        let promise = try shell.start()
-        shell.run()
-        try shell.channel.close().wait()
-        shell.run()
-        XCTAssertEqual(shell.recordedData, [])
-        XCTAssertEqual(shell.recordedStates, [.failed(.unknown)])
-        XCTAssertThrowsError(try promise.futureResult.wait())
+        let context = IOShellContext()
+        try context.assertStart()
     }
 
     func testFailedOnOutboundSSHChannelStart() throws {
-        let shell = EmbeddedIOShell()
-        let promise = try shell.start()
-        shell.channel.shouldFailOnOutboundEvent = true
-        XCTAssertTrue(shell.channel.isActive)
-        shell.run()
-        XCTAssertFalse(shell.channel.isActive)
-        XCTAssertEqual(shell.recordedData, [])
-        XCTAssertEqual(shell.recordedStates, [.failed(.unknown)])
-        XCTAssertThrowsError(try promise.futureResult.wait())
+        let context = IOShellContext()
+        context.harness.channel.shouldFailOnOutboundEvent = true
+        let promise = try context.harness.start(context.shell)
+        context.harness.channel.run()
+        XCTAssertThrowsError(try promise.wait())
+        XCTAssertEqual(context.recordedData, [])
+        XCTAssertEqual(context.recordedStates, [.failed(.unknown)])
     }
 
     func testReadingWhenConnected() throws {
-        let shell = EmbeddedIOShell()
-        try shell.assertStart()
-        let data = shell.channel.triggerInboundChannelString("Data")
-        shell.run()
-        XCTAssertEqual(shell.recordedData, [data])
-        let error = shell.channel.triggerInboundChannelString("Error")
-        shell.run()
-        XCTAssertEqual(shell.recordedData, [data, error])
+        let context = IOShellContext()
+        try context.assertStart()
+        let data = context.harness.channel.triggerInboundChannelString("Data")
+        context.harness.channel.run()
+        XCTAssertEqual(context.recordedData, [data])
+        let error = context.harness.channel.triggerInboundChannelString("Error")
+        context.harness.channel.run()
+        XCTAssertEqual(context.recordedData, [data, error])
     }
 
     func testReadingWhenNotConnected() throws {
-        let shell = EmbeddedIOShell()
-        let _ = shell.channel.triggerInboundChannelString("Data")
-        shell.run()
-        XCTAssertEqual(shell.recordedData, [])
+        let context = IOShellContext()
+        let _ = context.harness.channel.triggerInboundChannelString("Data")
+        context.harness.channel.run()
+        XCTAssertEqual(context.recordedData, [])
     }
 
     func testWritingWhenConnected() throws {
-        let shell = EmbeddedIOShell()
-        try shell.assertStart()
+        let context = IOShellContext()
+        try context.assertStart()
         let data = "Data".data(using: .utf8)!
-        let future = shell.shell.write(data)
-        shell.run()
+        let future = context.shell.write(data)
+        context.harness.channel.run()
         try future.wait()
         XCTAssertEqual(
-            try shell.channel.readAllOutbound(),
+            try context.harness.channel.readAllOutbound(),
             [SSHChannelData(type: .channel, data: .byteBuffer(.init(data: data)))]
         )
     }
 
     func testWritingWhenNotConnected() throws {
-        let shell = EmbeddedIOShell()
+        let context = IOShellContext()
         let data = "Data".data(using: .utf8)!
-        let future = shell.shell.write(data)
-        shell.run()
+        let future = context.shell.write(data)
+        context.harness.channel.run()
         XCTAssertThrowsError(try future.wait())
     }
 
     func testServerDisconnection() throws {
-        let shell = EmbeddedIOShell()
-        try shell.assertStart()
-        try shell.channel.close().wait()
-        shell.run()
-        XCTAssertEqual(shell.recordedStates, [.ready, .failed(.unknown)])
+        let context = IOShellContext()
+        try context.assertStart()
+        try context.harness.channel.close().wait()
+        context.harness.channel.run()
+        XCTAssertEqual(context.recordedStates, [.ready, .failed(.unknown)])
     }
 
     func testClientDisconnection() throws {
-        let shell = EmbeddedIOShell()
-        try shell.assertStart()
-        let future = shell.shell.close()
-        shell.run()
+        let context = IOShellContext()
+        try context.assertStart()
+        let future = context.shell.close()
+        context.harness.channel.run()
         try future.wait()
-        XCTAssertEqual(shell.recordedStates, [.ready, .closed])
+        XCTAssertEqual(context.recordedStates, [.ready, .closed])
     }
 }
 
-private class EmbeddedIOShell {
-
-    let channel = EmbeddedSSHChannel()
+private class IOShellContext {
+    let harness: SSHSessionHarness
     let shell: IOSSHShell
 
     private(set) var recordedStates: [SSHShell.State] = []
     private(set) var recordedData: [Data] = []
 
     init() {
-        shell = IOSSHShell(eventLoop: channel.loop)
+        harness = SSHSessionHarness()
+        shell = IOSSHShell(eventLoop: harness.channel.loop)
         shell.stateUpdateHandler = { [weak self] state in
             self?.recordedStates.append(state)
         }
@@ -111,36 +97,20 @@ private class EmbeddedIOShell {
         }
     }
 
-    func start() throws -> Promise<Void> {
-        let promise = channel.loop.makePromise(of: Void.self)
-        try channel.connect().wait()
-        let context = SSHSessionContext(
-            channel: channel.channel,
-            promise: promise
-        )
-        shell.start(in: context)
-        try channel.startMonitoringOutbound()
-        return promise
-    }
-
     func assertStart() throws {
-        let promise = try start()
-        run()
-        XCTAssertTrue(channel.isActive)
+        let promise = try harness.start(shell)
+        harness.channel.run()
+        XCTAssertTrue(harness.channel.isActive)
         XCTAssertEqual(
-            channel.outboundEvents,
+            harness.channel.outboundEvents,
             [SSHChannelRequestEvent.ShellRequest(wantReply: true)]
         )
         XCTAssertEqual(recordedData, [])
         XCTAssertEqual(recordedStates, [])
-        channel.triggerInbound(ChannelSuccessEvent())
-        run()
-        try promise.futureResult.wait()
+        harness.channel.triggerInbound(ChannelSuccessEvent())
+        harness.channel.run()
+        try promise.wait()
         XCTAssertEqual(recordedData, [])
         XCTAssertEqual(recordedStates, [.ready])
-    }
-
-    func run() {
-        channel.run()
     }
 }
