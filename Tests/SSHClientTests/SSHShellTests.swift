@@ -10,17 +10,31 @@ class SSHShellTests: XCTestCase {
     override func setUp() {
         sftpServer = DockerSSHServer()
         connection = SSHConnection(
-            host: sftpServer.host,
-            port: sftpServer.port,
-            authentication: sftpServer.credentials
+            host: "localhost",
+            port: 22,
+            authentication: .init(
+                username: "gaetanzanella",
+                method: .password(.init("Gzan@21@")),
+                hostKeyValidation: .acceptAll()
+            )
         )
     }
 
     override func tearDown() {
-        connection.cancel {}
+//        connection.cancel {}
     }
 
     // MARK: - Shell
+
+    func testTerminalLaunch() throws {
+        let shell = try launchShell()
+        let exp = XCTestExpectation()
+        shell.shell.write("ls\n".data(using: .utf8)!) { result in
+            XCTAssert(result.isSuccess)
+            exp.fulfill()
+        }
+        wait(for: [exp], timeout: 10000)
+    }
 
     func testShellLaunch() throws {
         let shell = try launchShell()

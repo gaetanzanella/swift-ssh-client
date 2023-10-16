@@ -110,7 +110,7 @@ class IOSSHShell {
         )
         .flatMapError { _ in
             // we close the channel in case of error
-            channel.closeFuture
+            channel.close()
         }
         channel.closeFuture.whenComplete { [weak self] _ in
             self?.trigger(.closed)
